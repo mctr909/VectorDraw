@@ -273,16 +273,31 @@ namespace VectorDraw {
         }
 
         void drawLine() {
+            var posCur = pictureBox1.PointToClient(Cursor.Position);
             foreach (var line in mLineList) {
                 var posA = line[0];
                 posA.X += mOffset.X - hScrollBar1.Value;
                 posA.Y += mOffset.Y - vScrollBar1.Value;
                 PointF posB;
+                var lineColor = Pens.Gray;
                 for (int i = 1; i < line.Length; i++) {
                     posB = line[i];
                     posB.X += mOffset.X - hScrollBar1.Value;
                     posB.Y += mOffset.Y - vScrollBar1.Value;
-                    mG.DrawLine(Pens.Gray, posA, posB);
+                    if (pointOnLine(posA, posB, posCur)) {
+                        lineColor = Pens.LightBlue;
+                        break;
+                    }
+                    posA = posB;
+                }
+                posA = line[0];
+                posA.X += mOffset.X - hScrollBar1.Value;
+                posA.Y += mOffset.Y - vScrollBar1.Value;
+                for (int i = 1; i < line.Length; i++) {
+                    posB = line[i];
+                    posB.X += mOffset.X - hScrollBar1.Value;
+                    posB.Y += mOffset.Y - vScrollBar1.Value;
+                    mG.DrawLine(lineColor, posA, posB);
                     posA = posB;
                 }
             }
@@ -349,6 +364,30 @@ namespace VectorDraw {
             pictureBox1.Image = mBmp;
             mOffset.X = mBmp.Width / 2;
             mOffset.Y = mBmp.Height / 2;
+        }
+
+        bool pointOnLine(PointF a, PointF b, PointF p) {
+            var abx = b.X - a.X;
+            var aby = b.Y - a.Y;
+            var apx = p.X - a.X;
+            var apy = p.Y - a.Y;
+            var abL2 = abx * abx + aby * aby;
+            PointF q;
+            if (0 == abL2) {
+                q = a;
+            } else {
+                var r = (apx * abx + apy * aby) / abL2;
+                if (r <= 0.0) {
+                    q = a;
+                } else if (1.0 <= r) {
+                    q = b;
+                } else {
+                    q = new PointF(abx * r + a.X, aby * r + a.Y);
+                }
+            }
+            var pqx = q.X - p.X;
+            var pqy = q.Y - p.Y;
+            return (pqx * pqx + pqy * pqy) < 16;
         }
     }
 }
