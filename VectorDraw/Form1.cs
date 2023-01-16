@@ -120,7 +120,23 @@ namespace VectorDraw {
         }
 
         private void toolStripMenuItem_edit_delete_Click(object sender, EventArgs e) {
-
+            var posCur = pictureBox1.PointToClient(Cursor.Position);
+            switch (mMode) {
+            case EMODE.SELECT:
+                break;
+            case EMODE.ORIGIN:
+                break;
+            case EMODE.POLYLINE:
+            case EMODE.POLYGON_FILL:
+            case EMODE.POLYGON_HOLE:
+                for (int i = 0; i < mLineList.Count; i++) {
+                    if (pointOnLine(mLineList[i], posCur)) {
+                        mLineList.RemoveAt(i);
+                        break;
+                    }
+                }
+                break;
+            }
         }
         #endregion
 
@@ -275,26 +291,12 @@ namespace VectorDraw {
         void drawLine() {
             var posCur = pictureBox1.PointToClient(Cursor.Position);
             foreach (var line in mLineList) {
+                var lineColor = pointOnLine(line, posCur) ? Pens.LightBlue : Pens.Gray;
                 var posA = line[0];
                 posA.X += mOffset.X - hScrollBar1.Value;
                 posA.Y += mOffset.Y - vScrollBar1.Value;
-                PointF posB;
-                var lineColor = Pens.Gray;
                 for (int i = 1; i < line.Length; i++) {
-                    posB = line[i];
-                    posB.X += mOffset.X - hScrollBar1.Value;
-                    posB.Y += mOffset.Y - vScrollBar1.Value;
-                    if (pointOnLine(posA, posB, posCur)) {
-                        lineColor = Pens.LightBlue;
-                        break;
-                    }
-                    posA = posB;
-                }
-                posA = line[0];
-                posA.X += mOffset.X - hScrollBar1.Value;
-                posA.Y += mOffset.Y - vScrollBar1.Value;
-                for (int i = 1; i < line.Length; i++) {
-                    posB = line[i];
+                    var posB = line[i];
                     posB.X += mOffset.X - hScrollBar1.Value;
                     posB.Y += mOffset.Y - vScrollBar1.Value;
                     mG.DrawLine(lineColor, posA, posB);
@@ -364,6 +366,23 @@ namespace VectorDraw {
             pictureBox1.Image = mBmp;
             mOffset.X = mBmp.Width / 2;
             mOffset.Y = mBmp.Height / 2;
+        }
+
+        bool pointOnLine(PointF[] line, PointF p) {
+            var posA = line[0];
+            posA.X += mOffset.X - hScrollBar1.Value;
+            posA.Y += mOffset.Y - vScrollBar1.Value;
+            PointF posB;
+            for (int i = 1; i < line.Length; i++) {
+                posB = line[i];
+                posB.X += mOffset.X - hScrollBar1.Value;
+                posB.Y += mOffset.Y - vScrollBar1.Value;
+                if (pointOnLine(posA, posB, p)) {
+                    return true;
+                }
+                posA = posB;
+            }
+            return false;
         }
 
         bool pointOnLine(PointF a, PointF b, PointF p) {
