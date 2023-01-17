@@ -23,17 +23,44 @@ namespace VectorDraw {
             DRAG,
             NEXT
         }
+        public enum ELINE {
+            LINE,
+            ARC
+        }
 
-        List<PointF> mPosList = new List<PointF>();
-        List<PointF[]> mLineList = new List<PointF[]>();
+        public struct POINT {
+            public ELINE Type;
+            public float X;
+            public float Y;
+            public float Radius;
+            public float Begin;
+            public float Elapse;
+
+            public POINT(double x = 0.0, double y = 0.0) {
+                Type = ELINE.LINE;
+                X = (float)x;
+                Y = (float)y;
+                Radius = 0.0f;
+                Begin = 0.0f;
+                Elapse = 0.0f;
+            }
+        }
+
+        public class Polygon {
+            public List<POINT> Points = new List<POINT>();
+        }
+
+        List<POINT> mPosList = new List<POINT>();
+        List<Polygon> mLineList = new List<Polygon>();
 
         EMODE mMode = EMODE.SELECT;
         ESTATE mSTATE = ESTATE.NONE;
-        Point mOffset = new Point();
+        POINT mOffset = new POINT();
 
+        int mDispScale = 1;
         bool mSizeChange = false;
-        Point mCursorPos = new Point();
-        Point mMouseDownPos = new Point();
+        POINT mCursorPos = new POINT();
+        POINT mMouseDownPos = new POINT();
         Bitmap mBmp;
         Graphics mG;
 
@@ -130,9 +157,11 @@ namespace VectorDraw {
             case EMODE.POLYGON_FILL:
             case EMODE.POLYGON_HOLE:
                 for (int i = 0; i < mLineList.Count; i++) {
-                    if (pointOnLine(mLineList[i], posCur)) {
-                        mLineList.RemoveAt(i);
-                        break;
+                    for (int j = 0; j < mLineList[i].Points.Count; j++) {
+                        if (pointOnLine(mLineList[i].Points, posCur)) {
+                            mLineList.RemoveAt(i);
+                            return;
+                        }
                     }
                 }
                 break;
@@ -159,15 +188,19 @@ namespace VectorDraw {
         }
 
         private void toolStripMenuItem_disp_100_Click(object sender, EventArgs e) {
-
+            mDispScale = 1;
         }
 
         private void toolStripMenuItem_disp_zoomIn_Click(object sender, EventArgs e) {
-
+            if (mDispScale < 16) {
+                mDispScale++;
+            }
         }
 
         private void toolStripMenuItem_disp_zoomOut_Click(object sender, EventArgs e) {
-
+            if (1 < mDispScale) {
+                mDispScale--;
+            }
         }
         #endregion
 
@@ -214,9 +247,9 @@ namespace VectorDraw {
 
         #region PictureBox events
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
-            mMouseDownPos = pictureBox1.PointToClient(Cursor.Position);
-            mMouseDownPos.X -= mOffset.X - hScrollBar1.Value;
-            mMouseDownPos.Y -= mOffset.Y - vScrollBar1.Value;
+            var pos = pictureBox1.PointToClient(Cursor.Position); 
+            mMouseDownPos.X = pos.X - mOffset.X + hScrollBar1.Value;
+            mMouseDownPos.Y = pos.Y - mOffset.Y + vScrollBar1.Value;
             switch (mMode) {
             case EMODE.SELECT:
                 if (ESTATE.NONE == mSTATE) {
@@ -240,17 +273,20 @@ namespace VectorDraw {
             case EMODE.POLYGON_HOLE:
                 switch (mSTATE) {
                 case ESTATE.BEGIN:
-                    mPosList = new List<PointF>();
-                    mPosList.Add(new Point(mCursorPos.X, mCursorPos.Y));
+                    mPosList = new List<POINT>() {
+                        new POINT(mCursorPos.X, mCursorPos.Y)
+                    };
                     mSTATE = ESTATE.NEXT;
                     break;
                 case ESTATE.NEXT:
                     if (e.Button == MouseButtons.Left) {
-                        mPosList.Add(new Point(mCursorPos.X, mCursorPos.Y));
+                        mPosList.Add(new POINT(mCursorPos.X, mCursorPos.Y));
                     } else {
                         if (3 <= mPosList.Count) {
                             mPosList.Add(mPosList[0]);
-                            mLineList.Add(mPosList.ToArray());
+                            var p = new Polygon();
+                            p.Points.AddRange(mPosList);
+                            mLineList.Add(p);
                             mPosList.Clear();
                             mSTATE = ESTATE.BEGIN;
                         }
@@ -262,9 +298,9 @@ namespace VectorDraw {
         }
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
-            mCursorPos = pictureBox1.PointToClient(Cursor.Position);
-            mCursorPos.X -= mOffset.X - hScrollBar1.Value;
-            mCursorPos.Y -= mOffset.Y - vScrollBar1.Value;
+            var pos = pictureBox1.PointToClient(Cursor.Position);
+            mCursorPos.X = pos.X - mOffset.X + hScrollBar1.Value;
+            mCursorPos.Y = pos.Y - mOffset.Y + vScrollBar1.Value;
         }
         #endregion
 
@@ -275,30 +311,26 @@ namespace VectorDraw {
 
             mG.Clear(Color.Transparent);
 
-            mG.DrawLine(Pens.Red, new Point(0, mOffset.Y), new Point(mBmp.Width, mOffset.Y));
-            mG.DrawLine(Pens.Red, new Point(mOffset.X, 0), new Point(mOffset.X, mBmp.Height));
+            mG.DrawLine(Pens.Red, new PointF(0, mOffset.Y), new PointF(mBmp.Width, mOffset.Y));
+            mG.DrawLine(Pens.Red, new PointF(mOffset.X, 0), new PointF(mOffset.X, mBmp.Height));
 
             drawEditingLine();
             drawLine();
-
-            if (EMODE.SELECT == mMode && ESTATE.DRAG == mSTATE) {
-
-            }
 
             pictureBox1.Image = pictureBox1.Image;
         }
 
         void drawLine() {
+            var posA = new PointF();
+            var posB = new PointF();
             var posCur = pictureBox1.PointToClient(Cursor.Position);
             foreach (var line in mLineList) {
-                var lineColor = pointOnLine(line, posCur) ? Pens.LightBlue : Pens.Gray;
-                var posA = line[0];
-                posA.X += mOffset.X - hScrollBar1.Value;
-                posA.Y += mOffset.Y - vScrollBar1.Value;
-                for (int i = 1; i < line.Length; i++) {
-                    var posB = line[i];
-                    posB.X += mOffset.X - hScrollBar1.Value;
-                    posB.Y += mOffset.Y - vScrollBar1.Value;
+                var lineColor = pointOnLine(line.Points, posCur) ? Pens.SkyBlue : Pens.Gray;
+                posA.X = line.Points[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = line.Points[0].Y + mOffset.Y - vScrollBar1.Value;
+                for (int i = 1; i < line.Points.Count; i++) {
+                    posB.X = line.Points[i].X + mOffset.X - hScrollBar1.Value;
+                    posB.Y = line.Points[i].Y + mOffset.Y - vScrollBar1.Value;
                     mG.DrawLine(lineColor, posA, posB);
                     posA = posB;
                 }
@@ -306,31 +338,28 @@ namespace VectorDraw {
         }
 
         void drawEditingLine() {
+            var posA = new PointF();
+            var posB = new PointF();
             if (1 == mPosList.Count) {
-                var posA = mPosList[0];
-                posA.X += mOffset.X - hScrollBar1.Value;
-                posA.Y += mOffset.Y - vScrollBar1.Value;
-                var posB = mCursorPos;
-                posB.X += mOffset.X - hScrollBar1.Value;
-                posB.Y += mOffset.Y - vScrollBar1.Value;
-                mG.DrawLine(Pens.SkyBlue, posA, posB);
+                posA.X = mPosList[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = mPosList[0].Y + mOffset.Y - vScrollBar1.Value;
+                posB.X = mCursorPos.X + mOffset.X - hScrollBar1.Value;
+                posB.Y = mCursorPos.Y + mOffset.Y - vScrollBar1.Value;
             } else if (2 <= mPosList.Count) {
-                var posA = mPosList[0];
-                posA.X += mOffset.X - hScrollBar1.Value;
-                posA.Y += mOffset.Y - vScrollBar1.Value;
-                PointF posB;
+                posA.X = mPosList[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = mPosList[0].Y + mOffset.Y - vScrollBar1.Value;
                 for (int i = 1; i < mPosList.Count; i++) {
-                    posB = mPosList[i];
-                    posB.X += mOffset.X - hScrollBar1.Value;
-                    posB.Y += mOffset.Y - vScrollBar1.Value;
+                    posB.X = mPosList[i].X + mOffset.X - hScrollBar1.Value;
+                    posB.Y = mPosList[i].Y + mOffset.Y - vScrollBar1.Value;
                     mG.DrawLine(Pens.SkyBlue, posA, posB);
                     posA = posB;
                 }
-                posB = mCursorPos;
-                posB.X += mOffset.X - hScrollBar1.Value;
-                posB.Y += mOffset.Y - vScrollBar1.Value;
-                mG.DrawLine(Pens.SkyBlue, posA, posB);
+                posB.X = mCursorPos.X + mOffset.X - hScrollBar1.Value;
+                posB.Y = mCursorPos.Y + mOffset.Y - vScrollBar1.Value;
+            } else {
+                return;
             }
+            mG.DrawLine(Pens.SkyBlue, posA, posB);
         }
 
         void sizeChange() {
@@ -368,15 +397,14 @@ namespace VectorDraw {
             mOffset.Y = mBmp.Height / 2;
         }
 
-        bool pointOnLine(PointF[] line, PointF p) {
-            var posA = line[0];
-            posA.X += mOffset.X - hScrollBar1.Value;
-            posA.Y += mOffset.Y - vScrollBar1.Value;
-            PointF posB;
-            for (int i = 1; i < line.Length; i++) {
-                posB = line[i];
-                posB.X += mOffset.X - hScrollBar1.Value;
-                posB.Y += mOffset.Y - vScrollBar1.Value;
+        bool pointOnLine(List<POINT> line, PointF p) {
+            var posA = new POINT();
+            var posB = new POINT();
+            posA.X = line[0].X + mOffset.X - hScrollBar1.Value;
+            posA.Y = line[0].Y + mOffset.Y - vScrollBar1.Value;
+            for (int i = 1; i < line.Count; i++) {
+                posB.X = line[i].X + mOffset.X - hScrollBar1.Value;
+                posB.Y = line[i].Y + mOffset.Y - vScrollBar1.Value;
                 if (pointOnLine(posA, posB, p)) {
                     return true;
                 }
@@ -385,13 +413,13 @@ namespace VectorDraw {
             return false;
         }
 
-        bool pointOnLine(PointF a, PointF b, PointF p) {
+        bool pointOnLine(POINT a, POINT b, PointF p, int limitDist = 5) {
             var abx = b.X - a.X;
             var aby = b.Y - a.Y;
             var apx = p.X - a.X;
             var apy = p.Y - a.Y;
             var abL2 = abx * abx + aby * aby;
-            PointF q;
+            POINT q;
             if (0 == abL2) {
                 q = a;
             } else {
@@ -401,12 +429,13 @@ namespace VectorDraw {
                 } else if (1.0 <= r) {
                     q = b;
                 } else {
-                    q = new PointF(abx * r + a.X, aby * r + a.Y);
+                    q = new POINT(abx * r + a.X, aby * r + a.Y);
                 }
             }
             var pqx = q.X - p.X;
             var pqy = q.Y - p.Y;
-            return (pqx * pqx + pqy * pqy) < 16;
+            var pqL2 = pqx * pqx + pqy * pqy;
+            return pqL2 < limitDist * limitDist;
         }
     }
 }
