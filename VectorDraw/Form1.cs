@@ -23,13 +23,18 @@ namespace VectorDraw {
             DRAG,
             NEXT
         }
-        public enum ELINE {
-            LINE,
+        public enum EPOS {
+            POINT,
             ARC
+        }
+        public enum EOBJ {
+            LINE,
+            FILL,
+            HOLE
         }
 
         public struct POINT {
-            public ELINE Type;
+            public EPOS Type;
             public float X;
             public float Y;
             public float Radius;
@@ -37,7 +42,7 @@ namespace VectorDraw {
             public float Elapse;
 
             public POINT(double x = 0.0, double y = 0.0) {
-                Type = ELINE.LINE;
+                Type = EPOS.POINT;
                 X = (float)x;
                 Y = (float)y;
                 Radius = 0.0f;
@@ -46,12 +51,13 @@ namespace VectorDraw {
             }
         }
 
-        public class Polygon {
+        public class OBJECT {
+            public EOBJ Type = EOBJ.LINE;
             public List<POINT> Points = new List<POINT>();
         }
 
         List<POINT> mPosList = new List<POINT>();
-        List<Polygon> mLineList = new List<Polygon>();
+        List<OBJECT> mObjList = new List<OBJECT>();
 
         EMODE mMode = EMODE.SELECT;
         ESTATE mSTATE = ESTATE.NONE;
@@ -156,10 +162,10 @@ namespace VectorDraw {
             case EMODE.POLYLINE:
             case EMODE.POLYGON_FILL:
             case EMODE.POLYGON_HOLE:
-                for (int i = 0; i < mLineList.Count; i++) {
-                    for (int j = 0; j < mLineList[i].Points.Count; j++) {
-                        if (pointOnLine(mLineList[i].Points, posCur)) {
-                            mLineList.RemoveAt(i);
+                for (int i = 0; i < mObjList.Count; i++) {
+                    for (int j = 0; j < mObjList[i].Points.Count; j++) {
+                        if (pointOnLine(mObjList[i].Points, posCur)) {
+                            mObjList.RemoveAt(i);
                             return;
                         }
                     }
@@ -284,9 +290,9 @@ namespace VectorDraw {
                     } else {
                         if (3 <= mPosList.Count) {
                             mPosList.Add(mPosList[0]);
-                            var p = new Polygon();
+                            var p = new OBJECT();
                             p.Points.AddRange(mPosList);
-                            mLineList.Add(p);
+                            mObjList.Add(p);
                             mPosList.Clear();
                             mSTATE = ESTATE.BEGIN;
                         }
@@ -324,13 +330,13 @@ namespace VectorDraw {
             var posA = new PointF();
             var posB = new PointF();
             var posCur = pictureBox1.PointToClient(Cursor.Position);
-            foreach (var line in mLineList) {
-                var lineColor = pointOnLine(line.Points, posCur) ? Pens.SkyBlue : Pens.Gray;
-                posA.X = line.Points[0].X + mOffset.X - hScrollBar1.Value;
-                posA.Y = line.Points[0].Y + mOffset.Y - vScrollBar1.Value;
-                for (int i = 1; i < line.Points.Count; i++) {
-                    posB.X = line.Points[i].X + mOffset.X - hScrollBar1.Value;
-                    posB.Y = line.Points[i].Y + mOffset.Y - vScrollBar1.Value;
+            foreach (var obj in mObjList) {
+                var lineColor = pointOnLine(obj.Points, posCur) ? Pens.SkyBlue : Pens.Gray;
+                posA.X = obj.Points[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = obj.Points[0].Y + mOffset.Y - vScrollBar1.Value;
+                for (int i = 1; i < obj.Points.Count; i++) {
+                    posB.X = obj.Points[i].X + mOffset.X - hScrollBar1.Value;
+                    posB.Y = obj.Points[i].Y + mOffset.Y - vScrollBar1.Value;
                     mG.DrawLine(lineColor, posA, posB);
                     posA = posB;
                 }
