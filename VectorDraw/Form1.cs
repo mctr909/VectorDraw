@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,18 +24,14 @@ namespace VectorDraw {
             DRAG,
             NEXT
         }
-        public enum EPOS {
-            POINT,
-            ARC
-        }
-        public enum EOBJ {
-            LINE,
-            FILL,
-            HOLE
-        }
 
         public struct POINT {
-            public EPOS Type;
+            public enum ETYPE {
+                P,
+                A
+            }
+
+            public ETYPE Type;
             public float X;
             public float Y;
             public float Radius;
@@ -42,7 +39,7 @@ namespace VectorDraw {
             public float Elapse;
 
             public POINT(double x = 0.0, double y = 0.0) {
-                Type = EPOS.POINT;
+                Type = ETYPE.P;
                 X = (float)x;
                 Y = (float)y;
                 Radius = 0.0f;
@@ -52,7 +49,13 @@ namespace VectorDraw {
         }
 
         public class OBJECT {
-            public EOBJ Type = EOBJ.LINE;
+            public enum ETYPE {
+                L,
+                P
+            }
+
+            public ETYPE Type = ETYPE.L;
+            public string Name = "no name";
             public List<POINT> Points = new List<POINT>();
         }
 
@@ -100,7 +103,13 @@ namespace VectorDraw {
         }
 
         private void toolStripMenuItem_file_open_Click(object sender, EventArgs e) {
-
+            openFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
+            openFileDialog1.ShowDialog();
+            var path = openFileDialog1.FileName;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) {
+                return;
+            }
+            load(path);
         }
 
         private void toolStripMenuItem_file_overwrite_Click(object sender, EventArgs e) {
@@ -108,7 +117,13 @@ namespace VectorDraw {
         }
 
         private void toolStripMenuItem_file_save_Click(object sender, EventArgs e) {
-
+            saveFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
+            saveFileDialog1.ShowDialog();
+            var path = saveFileDialog1.FileName;
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(Path.GetDirectoryName(path))) {
+                return;
+            }
+            save(path);
         }
 
         private void toolStripMenuItem_file_pdf_Click(object sender, EventArgs e) {
@@ -155,10 +170,9 @@ namespace VectorDraw {
         private void toolStripMenuItem_edit_delete_Click(object sender, EventArgs e) {
             var posCur = pictureBox1.PointToClient(Cursor.Position);
             switch (mMode) {
-            case EMODE.SELECT:
-                break;
             case EMODE.ORIGIN:
                 break;
+            case EMODE.SELECT:
             case EMODE.POLYLINE:
             case EMODE.POLYGON_FILL:
             case EMODE.POLYGON_HOLE:
@@ -289,7 +303,6 @@ namespace VectorDraw {
                         mPosList.Add(new POINT(mCursorPos.X, mCursorPos.Y));
                     } else {
                         if (3 <= mPosList.Count) {
-                            mPosList.Add(mPosList[0]);
                             var p = new OBJECT();
                             p.Points.AddRange(mPosList);
                             mObjList.Add(p);
@@ -326,6 +339,63 @@ namespace VectorDraw {
             pictureBox1.Image = pictureBox1.Image;
         }
 
+        void save(string path) {
+            var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
+            var sw = new StreamWriter(fs);
+            foreach (var o in mObjList) {
+                sw.WriteLine("{0}\t{1}\t{2}", o.Type, o.Points.Count, o.Name);
+                foreach (var p in o.Points) {
+                    switch (p.Type) {
+                    case POINT.ETYPE.P:
+                        sw.WriteLine("{0}\t{1}\t{2}", p.Type, p.X, p.Y);
+                        break;
+                    case POINT.ETYPE.A:
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", p.Type, p.X, p.Y, p.Radius, p.Begin, p.Elapse);
+                        break;
+                    }
+                }
+            }
+            sw.Flush();
+            sw.Close();
+            sw.Dispose();
+        }
+
+        void load(string path) {
+            var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+            var sr = new StreamReader(fs);
+            mObjList.Clear();
+            while (!sr.EndOfStream) {
+                var o = sr.ReadLine().Split('\t');
+                var pcount = int.Parse(o[1]);
+                var obj = new OBJECT();
+                for (int i = 0; i < pcount; i++) {
+                    var p = sr.ReadLine().Split('\t');
+                    switch (p[0]) {
+                    case "P":
+                        obj.Points.Add(new POINT() {
+                            Type = POINT.ETYPE.P,
+                            X = float.Parse(p[1]),
+                            Y = float.Parse(p[2])
+                        });
+                        break;
+                    case "A":
+                        obj.Points.Add(new POINT() {
+                            Type = POINT.ETYPE.A,
+                            X = float.Parse(p[1]),
+                            Y = float.Parse(p[2]),
+                            Radius = float.Parse(p[3]),
+                            Begin = float.Parse(p[4]),
+                            Elapse = float.Parse(p[5])
+                        });
+                        break;
+                    }
+                }
+                mObjList.Add(obj);
+            }
+            sr.Close();
+            sr.Dispose();
+        }
+
         void drawLine() {
             var posA = new PointF();
             var posB = new PointF();
@@ -340,6 +410,9 @@ namespace VectorDraw {
                     mG.DrawLine(lineColor, posA, posB);
                     posA = posB;
                 }
+                posB.X = obj.Points[0].X + mOffset.X - hScrollBar1.Value;
+                posB.Y = obj.Points[0].Y + mOffset.Y - vScrollBar1.Value;
+                mG.DrawLine(lineColor, posA, posB);
             }
         }
 
@@ -396,7 +469,7 @@ namespace VectorDraw {
                 pictureBox1.Image = null;
             }
 
-            mBmp = new Bitmap(pictureBox1.Width, pictureBox1.Height);
+            mBmp = new Bitmap(Math.Max(MinimumSize.Width, pictureBox1.Width), Math.Max(MinimumSize.Height, pictureBox1.Height));
             mG = Graphics.FromImage(mBmp);
             pictureBox1.Image = mBmp;
             mOffset.X = mBmp.Width / 2;
@@ -415,6 +488,11 @@ namespace VectorDraw {
                     return true;
                 }
                 posA = posB;
+            }
+            posB.X = line[0].X + mOffset.X - hScrollBar1.Value;
+            posB.Y = line[0].Y + mOffset.Y - vScrollBar1.Value;
+            if (pointOnLine(posA, posB, p)) {
+                return true;
             }
             return false;
         }
