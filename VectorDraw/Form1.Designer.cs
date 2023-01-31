@@ -72,6 +72,7 @@
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
+            this.toolStripMenuItem_disp_setGridPitch = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
@@ -242,6 +243,7 @@
             this.toolStripMenuItem_disp_moveToLocalOrigin,
             this.toolStripMenuItem_disp_moveToGlobalOrigin,
             this.toolStripSeparator9,
+            this.toolStripMenuItem_disp_setGridPitch,
             this.toolStripMenuItem_disp_localGrid,
             this.toolStripMenuItem_disp_globalGrid});
             this.表示DToolStripMenuItem.Name = "表示DToolStripMenuItem";
@@ -327,21 +329,21 @@
             // toolStripMenuItem_snap_grid
             // 
             this.toolStripMenuItem_snap_grid.Name = "toolStripMenuItem_snap_grid";
-            this.toolStripMenuItem_snap_grid.Size = new System.Drawing.Size(151, 22);
+            this.toolStripMenuItem_snap_grid.Size = new System.Drawing.Size(180, 22);
             this.toolStripMenuItem_snap_grid.Text = "グリッドにスナップ";
             this.toolStripMenuItem_snap_grid.Click += new System.EventHandler(this.toolStripMenuItem_snap_grid_Click);
             // 
             // toolStripMenuItem_snap_vert
             // 
             this.toolStripMenuItem_snap_vert.Name = "toolStripMenuItem_snap_vert";
-            this.toolStripMenuItem_snap_vert.Size = new System.Drawing.Size(151, 22);
+            this.toolStripMenuItem_snap_vert.Size = new System.Drawing.Size(180, 22);
             this.toolStripMenuItem_snap_vert.Text = "頂点にスナップ";
             this.toolStripMenuItem_snap_vert.Click += new System.EventHandler(this.toolStripMenuItem_snap_vert_Click);
             // 
             // toolStripMenuItem_snap_line
             // 
             this.toolStripMenuItem_snap_line.Name = "toolStripMenuItem_snap_line";
-            this.toolStripMenuItem_snap_line.Size = new System.Drawing.Size(151, 22);
+            this.toolStripMenuItem_snap_line.Size = new System.Drawing.Size(180, 22);
             this.toolStripMenuItem_snap_line.Text = "線にスナップ";
             this.toolStripMenuItem_snap_line.Click += new System.EventHandler(this.toolStripMenuItem_snap_line_Click);
             // 
@@ -461,6 +463,13 @@
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
             // 
+            // toolStripMenuItem_disp_setGridPitch
+            // 
+            this.toolStripMenuItem_disp_setGridPitch.Name = "toolStripMenuItem_disp_setGridPitch";
+            this.toolStripMenuItem_disp_setGridPitch.Size = new System.Drawing.Size(236, 22);
+            this.toolStripMenuItem_disp_setGridPitch.Text = "グリッドのピッチを設定";
+            this.toolStripMenuItem_disp_setGridPitch.Click += new System.EventHandler(this.toolStripMenuItem_disp_setGridPitch_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -536,6 +545,7 @@
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem_edit_esc;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
+        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem_disp_setGridPitch;
     }
 }
 

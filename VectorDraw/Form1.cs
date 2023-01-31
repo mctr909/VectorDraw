@@ -27,24 +27,19 @@ namespace VectorDraw {
 
         public struct POINT {
             public enum ETYPE {
-                P,
-                A
+                P, C, A
             }
 
             public ETYPE Type;
             public float X;
             public float Y;
             public float Radius;
-            public float Begin;
-            public float Elapse;
 
             public POINT(double x = 0.0, double y = 0.0) {
                 Type = ETYPE.P;
                 X = (float)x;
                 Y = (float)y;
                 Radius = 0.0f;
-                Begin = 0.0f;
-                Elapse = 0.0f;
             }
         }
 
@@ -199,14 +194,6 @@ namespace VectorDraw {
             vScrollBar1.Value = 0;
         }
 
-        private void toolStripMenuItem_disp_localGrid_Click(object sender, EventArgs e) {
-
-        }
-
-        private void toolStripMenuItem_disp_globalGrid_Click(object sender, EventArgs e) {
-
-        }
-
         private void toolStripMenuItem_disp_100_Click(object sender, EventArgs e) {
             mDispScale = 1;
         }
@@ -221,6 +208,18 @@ namespace VectorDraw {
             if (1 < mDispScale) {
                 mDispScale--;
             }
+        }
+
+        private void toolStripMenuItem_disp_setGridPitch_Click(object sender, EventArgs e) {
+
+        }
+
+        private void toolStripMenuItem_disp_localGrid_Click(object sender, EventArgs e) {
+
+        }
+
+        private void toolStripMenuItem_disp_globalGrid_Click(object sender, EventArgs e) {
+
         }
         #endregion
 
@@ -339,108 +338,6 @@ namespace VectorDraw {
             pictureBox1.Image = pictureBox1.Image;
         }
 
-        void save(string path) {
-            var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
-            var sw = new StreamWriter(fs);
-            foreach (var o in mObjList) {
-                sw.WriteLine("{0}\t{1}\t{2}", o.Type, o.Points.Count, o.Name);
-                foreach (var p in o.Points) {
-                    switch (p.Type) {
-                    case POINT.ETYPE.P:
-                        sw.WriteLine("{0}\t{1}\t{2}", p.Type, p.X, p.Y);
-                        break;
-                    case POINT.ETYPE.A:
-                        sw.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", p.Type, p.X, p.Y, p.Radius, p.Begin, p.Elapse);
-                        break;
-                    }
-                }
-            }
-            sw.Flush();
-            sw.Close();
-            sw.Dispose();
-        }
-
-        void load(string path) {
-            var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-            var sr = new StreamReader(fs);
-            mObjList.Clear();
-            while (!sr.EndOfStream) {
-                var o = sr.ReadLine().Split('\t');
-                var pcount = int.Parse(o[1]);
-                var obj = new OBJECT();
-                for (int i = 0; i < pcount; i++) {
-                    var p = sr.ReadLine().Split('\t');
-                    switch (p[0]) {
-                    case "P":
-                        obj.Points.Add(new POINT() {
-                            Type = POINT.ETYPE.P,
-                            X = float.Parse(p[1]),
-                            Y = float.Parse(p[2])
-                        });
-                        break;
-                    case "A":
-                        obj.Points.Add(new POINT() {
-                            Type = POINT.ETYPE.A,
-                            X = float.Parse(p[1]),
-                            Y = float.Parse(p[2]),
-                            Radius = float.Parse(p[3]),
-                            Begin = float.Parse(p[4]),
-                            Elapse = float.Parse(p[5])
-                        });
-                        break;
-                    }
-                }
-                mObjList.Add(obj);
-            }
-            sr.Close();
-            sr.Dispose();
-        }
-
-        void drawLine() {
-            var posA = new PointF();
-            var posB = new PointF();
-            var posCur = pictureBox1.PointToClient(Cursor.Position);
-            foreach (var obj in mObjList) {
-                var lineColor = pointOnLine(obj.Points, posCur) ? Pens.SkyBlue : Pens.Gray;
-                posA.X = obj.Points[0].X + mOffset.X - hScrollBar1.Value;
-                posA.Y = obj.Points[0].Y + mOffset.Y - vScrollBar1.Value;
-                for (int i = 1; i < obj.Points.Count; i++) {
-                    posB.X = obj.Points[i].X + mOffset.X - hScrollBar1.Value;
-                    posB.Y = obj.Points[i].Y + mOffset.Y - vScrollBar1.Value;
-                    mG.DrawLine(lineColor, posA, posB);
-                    posA = posB;
-                }
-                posB.X = obj.Points[0].X + mOffset.X - hScrollBar1.Value;
-                posB.Y = obj.Points[0].Y + mOffset.Y - vScrollBar1.Value;
-                mG.DrawLine(lineColor, posA, posB);
-            }
-        }
-
-        void drawEditingLine() {
-            var posA = new PointF();
-            var posB = new PointF();
-            if (1 == mPosList.Count) {
-                posA.X = mPosList[0].X + mOffset.X - hScrollBar1.Value;
-                posA.Y = mPosList[0].Y + mOffset.Y - vScrollBar1.Value;
-                posB.X = mCursorPos.X + mOffset.X - hScrollBar1.Value;
-                posB.Y = mCursorPos.Y + mOffset.Y - vScrollBar1.Value;
-            } else if (2 <= mPosList.Count) {
-                posA.X = mPosList[0].X + mOffset.X - hScrollBar1.Value;
-                posA.Y = mPosList[0].Y + mOffset.Y - vScrollBar1.Value;
-                for (int i = 1; i < mPosList.Count; i++) {
-                    posB.X = mPosList[i].X + mOffset.X - hScrollBar1.Value;
-                    posB.Y = mPosList[i].Y + mOffset.Y - vScrollBar1.Value;
-                    mG.DrawLine(Pens.SkyBlue, posA, posB);
-                    posA = posB;
-                }
-                posB.X = mCursorPos.X + mOffset.X - hScrollBar1.Value;
-                posB.Y = mCursorPos.Y + mOffset.Y - vScrollBar1.Value;
-            } else {
-                return;
-            }
-            mG.DrawLine(Pens.SkyBlue, posA, posB);
-        }
-
         void sizeChange() {
             mSizeChange = false;
 
@@ -474,6 +371,116 @@ namespace VectorDraw {
             pictureBox1.Image = mBmp;
             mOffset.X = mBmp.Width / 2;
             mOffset.Y = mBmp.Height / 2;
+        }
+
+        void save(string path) {
+            var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
+            var sw = new StreamWriter(fs);
+            foreach (var o in mObjList) {
+                sw.WriteLine("{0}\t{1}\t{2}", o.Type, o.Points.Count, o.Name);
+                foreach (var p in o.Points) {
+                    switch (p.Type) {
+                    case POINT.ETYPE.P:
+                        sw.WriteLine("{0}\t{1}\t{2}", p.Type, p.X, p.Y);
+                        break;
+                    case POINT.ETYPE.C:
+                    case POINT.ETYPE.A:
+                        sw.WriteLine("{0}\t{1}\t{2}\t{3}", p.Type, p.X, p.Y, p.Radius);
+                        break;
+                    }
+                }
+            }
+            sw.Flush();
+            sw.Close();
+            sw.Dispose();
+        }
+
+        void load(string path) {
+            var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+            var sr = new StreamReader(fs);
+            mObjList.Clear();
+            while (!sr.EndOfStream) {
+                var o = sr.ReadLine().Split('\t');
+                var pcount = int.Parse(o[1]);
+                var obj = new OBJECT();
+                for (int i = 0; i < pcount; i++) {
+                    var p = sr.ReadLine().Split('\t');
+                    switch (p[0]) {
+                    case "P":
+                        obj.Points.Add(new POINT() {
+                            Type = POINT.ETYPE.P,
+                            X = float.Parse(p[1]),
+                            Y = float.Parse(p[2])
+                        });
+                        break;
+                    case "C":
+                    case "A":
+                        obj.Points.Add(new POINT() {
+                            Type = POINT.ETYPE.C,
+                            X = float.Parse(p[1]),
+                            Y = float.Parse(p[2]),
+                            Radius = float.Parse(p[3])
+                        });
+                        break;
+                    }
+                }
+                mObjList.Add(obj);
+            }
+            sr.Close();
+            sr.Dispose();
+        }
+
+        void drawLine() {
+            var posA = new PointF();
+            var posB = new PointF();
+            var posCur = pictureBox1.PointToClient(Cursor.Position);
+            foreach (var obj in mObjList) {
+                var online = pointOnLine(obj.Points, posCur);
+                var lineColor = online ? Pens.SkyBlue : Pens.Gray;
+                var pointColor = online ? Brushes.Red : Brushes.SkyBlue;
+                posA.X = obj.Points[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = obj.Points[0].Y + mOffset.Y - vScrollBar1.Value;
+                for (int i = 1; i < obj.Points.Count; i++) {
+                    posB.X = obj.Points[i].X + mOffset.X - hScrollBar1.Value;
+                    posB.Y = obj.Points[i].Y + mOffset.Y - vScrollBar1.Value;
+                    mG.DrawLine(lineColor, posA, posB);
+                    mG.FillPie(pointColor, posB.X - 2.5f, posB.Y - 2.5f, 5, 5, 0, 360);
+                    posA = posB;
+                }
+                posB.X = obj.Points[0].X + mOffset.X - hScrollBar1.Value;
+                posB.Y = obj.Points[0].Y + mOffset.Y - vScrollBar1.Value;
+                mG.DrawLine(lineColor, posA, posB);
+                mG.FillPie(pointColor, posB.X - 2.5f, posB.Y - 2.5f, 5, 5, 0, 360);
+            }
+        }
+
+        void drawEditingLine() {
+            var posA = new PointF();
+            var posB = new PointF();
+            if (1 == mPosList.Count) {
+                posA.X = mPosList[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = mPosList[0].Y + mOffset.Y - vScrollBar1.Value;
+                posB.X = mCursorPos.X + mOffset.X - hScrollBar1.Value;
+                posB.Y = mCursorPos.Y + mOffset.Y - vScrollBar1.Value;
+                mG.FillPie(Brushes.SkyBlue, posA.X - 2.5f, posA.Y - 2.5f, 5, 5, 0, 360);
+            } else if (2 <= mPosList.Count) {
+                posA.X = mPosList[0].X + mOffset.X - hScrollBar1.Value;
+                posA.Y = mPosList[0].Y + mOffset.Y - vScrollBar1.Value;
+                mG.FillPie(Brushes.SkyBlue, posA.X - 2.5f, posA.Y - 2.5f, 5, 5, 0, 360);
+                for (int i = 1; i < mPosList.Count; i++) {
+                    posB.X = mPosList[i].X + mOffset.X - hScrollBar1.Value;
+                    posB.Y = mPosList[i].Y + mOffset.Y - vScrollBar1.Value;
+                    mG.DrawLine(Pens.SkyBlue, posA, posB);
+                    mG.FillPie(Brushes.SkyBlue, posB.X - 2.5f, posB.Y - 2.5f, 5, 5, 0, 360);
+                    posA = posB;
+                }
+                posB.X = mCursorPos.X + mOffset.X - hScrollBar1.Value;
+                posB.Y = mCursorPos.Y + mOffset.Y - vScrollBar1.Value;
+            } else {
+                return;
+            }
+            mG.DrawLine(Pens.SkyBlue, posA, posB);
+            mG.FillPie(Brushes.SkyBlue, posB.X - 2.5f, posB.Y - 2.5f, 5, 5, 0, 360);
         }
 
         bool pointOnLine(List<POINT> line, PointF p) {
