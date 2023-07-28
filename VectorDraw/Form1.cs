@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace VectorDraw {
     public partial class Form1 : Form {
+        enum MODE {
+            SELECT,
+            MOVE_ORIGIN,
+            POLYLINE,
+            POLYGON_FILL,
+            POLYGON_HOLE
+        }
+
+        MODE mMode = MODE.SELECT;
         int mDispScale = 1;
         bool mSizeChange = false;
         Bitmap mBmp;
@@ -35,17 +39,17 @@ namespace VectorDraw {
         private void Form1_KeyDown(object sender, KeyEventArgs e) {
             switch (e.KeyCode) {
             case Keys.Escape:
-                toolStripMenuItem_edit_esc_Click(sender, e);
+                tsmEditEsc_Click(sender, e);
                 break;
             }
         }
 
         #region Menu[File] events
-        private void toolStripMenuItem_file_new_Click(object sender, EventArgs e) {
+        private void tsmFileNew_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_file_open_Click(object sender, EventArgs e) {
+        private void tsmFileOpen_Click(object sender, EventArgs e) {
             openFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
             openFileDialog1.ShowDialog();
             var path = openFileDialog1.FileName;
@@ -55,11 +59,11 @@ namespace VectorDraw {
             load(path);
         }
 
-        private void toolStripMenuItem_file_overwrite_Click(object sender, EventArgs e) {
+        private void tsmFileOverwrite_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_file_save_Click(object sender, EventArgs e) {
+        private void tsmFileSave_Click(object sender, EventArgs e) {
             saveFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
             saveFileDialog1.ShowDialog();
             var path = saveFileDialog1.FileName;
@@ -69,112 +73,120 @@ namespace VectorDraw {
             save(path);
         }
 
-        private void toolStripMenuItem_file_pdf_Click(object sender, EventArgs e) {
+        private void tsmFileSavePDF_Click(object sender, EventArgs e) {
 
         }
         #endregion
 
         #region Menu[Edit] events
-        private void toolStripMenuItem_edit_undo_Click(object sender, EventArgs e) {
+        private void tsmEditUndo_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_edit_redo_Click(object sender, EventArgs e) {
+        private void tsmEditRedo_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_edit_esc_Click(object sender, EventArgs e) {
+        private void tsmEditEsc_Click(object sender, EventArgs e) {
         }
 
-        private void toolStripMenuItem_edit_cut_Click(object sender, EventArgs e) {
-
-        }
-
-        private void toolStripMenuItem_edit_copy_Click(object sender, EventArgs e) {
+        private void tsmEditCut_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_edit_paste_Click(object sender, EventArgs e) {
+        private void tsmEditCopy_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_edit_delete_Click(object sender, EventArgs e) {
+        private void tsmEditPaste_Click(object sender, EventArgs e) {
+
+        }
+
+        private void tsmEditDelete_Click(object sender, EventArgs e) {
         }
         #endregion
 
         #region Menu[Display] events
-        private void toolStripMenuItem_disp_moveToLocalOrigin_Click(object sender, EventArgs e) {
+        private void tsmDispMoveToLocalOrigin_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_disp_moveToGlobalOrigin_Click(object sender, EventArgs e) {
+        private void tsmDispMoveToGlobalOrigin_Click(object sender, EventArgs e) {
             hScrollBar1.Value = 0;
             vScrollBar1.Value = 0;
         }
 
-        private void toolStripMenuItem_disp_100_Click(object sender, EventArgs e) {
+        private void tsmDisp100_Click(object sender, EventArgs e) {
             mDispScale = 1;
         }
 
-        private void toolStripMenuItem_disp_zoomIn_Click(object sender, EventArgs e) {
+        private void tsmDispZoomIn_Click(object sender, EventArgs e) {
             if (mDispScale < 16) {
                 mDispScale++;
             }
         }
 
-        private void toolStripMenuItem_disp_zoomOut_Click(object sender, EventArgs e) {
+        private void tsmDispZoomOut_Click(object sender, EventArgs e) {
             if (1 < mDispScale) {
                 mDispScale--;
             }
         }
 
-        private void toolStripMenuItem_disp_setGridPitch_Click(object sender, EventArgs e) {
+        private void tsmDispSetGridPitch_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_disp_localGrid_Click(object sender, EventArgs e) {
+        private void tsmDispLocalGrid_Click(object sender, EventArgs e) {
 
         }
 
-        private void toolStripMenuItem_disp_globalGrid_Click(object sender, EventArgs e) {
-
-        }
-        #endregion
-
-        #region Menu[Snap] events
-        private void toolStripMenuItem_snap_grid_Click(object sender, EventArgs e) {
-
-        }
-
-        private void toolStripMenuItem_snap_vert_Click(object sender, EventArgs e) {
-
-        }
-
-        private void toolStripMenuItem_snap_line_Click(object sender, EventArgs e) {
+        private void tsmDispGlobalGrid_Click(object sender, EventArgs e) {
 
         }
         #endregion
 
-        #region Menu[Mode] events
-        private void toolStripMenuItem_mode_select_Click(object sender, EventArgs e) {
+        private void tsmSnap_Click(object sender, EventArgs e) {
+            var obj = (ToolStripMenuItem)sender;
+            obj.Checked = !obj.Checked;
         }
 
-        private void toolStripMenuItem_mode_moveLocalOrigin_Click(object sender, EventArgs e) {
+        private void tsmMode_Click(object sender, EventArgs e) {
+            tsmModeSelect.Checked = false;
+            tsmModeMoveLocalOrigin.Checked = false;
+            tsmModePolyline.Checked = false;
+            tsmModePolygonFill.Checked = false;
+            tsmModePolygonHole.Checked = false;
+            var obj = (ToolStripMenuItem)sender;
+            if (obj == tsmModeSelect) {
+                obj.Checked = true;
+                mMode = MODE.SELECT;
+                return;
+            }
+            if (obj == tsmModeMoveLocalOrigin) {
+                obj.Checked = true;
+                mMode = MODE.MOVE_ORIGIN;
+                return;
+            }
+            if (obj == tsmModePolyline) {
+                obj.Checked = true;
+                mMode = MODE.POLYLINE;
+                return;
+            }
+            if (obj == tsmModePolygonFill) {
+                obj.Checked = true;
+                mMode = MODE.POLYGON_FILL;
+                return;
+            }
+            if (obj == tsmModePolygonHole) {
+                obj.Checked = true;
+                mMode = MODE.POLYGON_HOLE;
+                return;
+            }
         }
-
-        private void toolStripMenuItem_mode_polyline_Click(object sender, EventArgs e) {
-        }
-
-        private void toolStripMenuItem_mode_polygonFill_Click(object sender, EventArgs e) {
-        }
-
-        private void toolStripMenuItem_mode_polygonHole_Click(object sender, EventArgs e) {
-        }
-        #endregion
 
         #region PictureBox events
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
-            var pos = pictureBox1.PointToClient(Cursor.Position); 
+            var pos = pictureBox1.PointToClient(Cursor.Position);
         }
 
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e) {
