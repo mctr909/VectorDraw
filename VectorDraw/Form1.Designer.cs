@@ -404,7 +404,7 @@
             this.toolStripMenuItem_mode_polygonFill.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
             | System.Windows.Forms.Keys.F)));
             this.toolStripMenuItem_mode_polygonFill.Size = new System.Drawing.Size(241, 22);
-            this.toolStripMenuItem_mode_polygonFill.Text = "ポリゴン塗りつぶし";
+            this.toolStripMenuItem_mode_polygonFill.Text = "ポリゴン(塗りつぶし)";
             this.toolStripMenuItem_mode_polygonFill.Click += new System.EventHandler(this.toolStripMenuItem_mode_polygonFill_Click);
             // 
             // toolStripMenuItem_mode_polygonHole
@@ -413,7 +413,7 @@
             this.toolStripMenuItem_mode_polygonHole.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
             | System.Windows.Forms.Keys.H)));
             this.toolStripMenuItem_mode_polygonHole.Size = new System.Drawing.Size(241, 22);
-            this.toolStripMenuItem_mode_polygonHole.Text = "ポリゴン穴あけ";
+            this.toolStripMenuItem_mode_polygonHole.Text = "ポリゴン(穴あけ)";
             this.toolStripMenuItem_mode_polygonHole.Click += new System.EventHandler(this.toolStripMenuItem_mode_polygonHole_Click);
             // 
             // pictureBox1
