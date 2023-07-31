@@ -11,14 +11,25 @@ namespace VectorDraw {
             MOVE_ORIGIN,
             POLYLINE,
             POLYGON_FILL,
-            POLYGON_HOLE
+            POLYGON_HOLE,
+            POLYGON_FILL_ARC,
+            POLYGON_HOLE_ARC
         }
-
+        enum MOUSE_STATE {
+            BEGIN,
+            DRAG,
+            END
+        }
         MODE mMode = MODE.SELECT;
         int mDispScale = 1;
         bool mSizeChange = false;
         Bitmap mBmp;
         Graphics mG;
+        PointF mScroll = new PointF();
+        PointF mCursor = new PointF();
+        MOUSE_STATE mMouseState = MOUSE_STATE.BEGIN;
+        List<PointF> mEditPoints = new List<PointF>();
+        List<List<PointF>> mObjList = new List<List<PointF>>();
 
         public Form1() {
             InitializeComponent();
@@ -160,43 +171,72 @@ namespace VectorDraw {
             if (obj == tsmModeSelect) {
                 obj.Checked = true;
                 mMode = MODE.SELECT;
+                mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
             if (obj == tsmModeMoveLocalOrigin) {
                 obj.Checked = true;
                 mMode = MODE.MOVE_ORIGIN;
+                mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
             if (obj == tsmModePolyline) {
                 obj.Checked = true;
                 mMode = MODE.POLYLINE;
+                mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
             if (obj == tsmModePolygonFill) {
                 obj.Checked = true;
                 mMode = MODE.POLYGON_FILL;
+                mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
             if (obj == tsmModePolygonHole) {
                 obj.Checked = true;
                 mMode = MODE.POLYGON_HOLE;
+                mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
         }
 
         #region PictureBox events
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
-            var pos = pictureBox1.PointToClient(Cursor.Position);
+            switch (mMouseState) {
+            case MOUSE_STATE.BEGIN:
+                mEditPoints.Add(mCursor);
+                mMouseState = MOUSE_STATE.DRAG; break;
+            case MOUSE_STATE.DRAG:
+                if (e.Button == MouseButtons.Left) {
+                    mEditPoints.Add(mCursor);
+                } else {
+                    mMouseState = MOUSE_STATE.BEGIN;
+                    mEditPoints.Add(mEditPoints[0]);
+                    mObjList.Add(new List<PointF>(mEditPoints.ToArray()));
+                    mEditPoints.Clear();
+                }
+                break;
+            }
         }
 
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e) {
-            var pos = pictureBox1.PointToClient(Cursor.Position);
         }
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
-            var pos = pictureBox1.PointToClient(Cursor.Position);
+            var mousePos = pictureBox1.PointToClient(Cursor.Position);
+            mCursor.X = mScroll.X + mousePos.X;
+            mCursor.Y = mScroll.Y - mousePos.Y;
+            tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X, mCursor.Y);
         }
         #endregion
+
+        private void hScrollBar1_Scroll(object sender, ScrollEventArgs e) {
+            mScroll.X = hScrollBar1.Value - mBmp.Width / 2;
+        }
+
+        private void vScrollBar1_Scroll(object sender, ScrollEventArgs e) {
+            mScroll.Y = mBmp.Height / 2 - vScrollBar1.Value;
+        }
 
         private void timer1_Tick(object sender, EventArgs e) {
             if (mSizeChange) {
@@ -242,6 +282,8 @@ namespace VectorDraw {
             mBmp = new Bitmap(Math.Max(MinimumSize.Width, pictureBox1.Width), Math.Max(MinimumSize.Height, pictureBox1.Height));
             mG = Graphics.FromImage(mBmp);
             pictureBox1.Image = mBmp;
+            mScroll.X = hScrollBar1.Value - mBmp.Width / 2;
+            mScroll.Y = mBmp.Height / 2 - vScrollBar1.Value;
         }
 
         void save(string path) {
@@ -260,9 +302,54 @@ namespace VectorDraw {
         }
 
         void drawLine() {
+            foreach(var obj in mObjList) {
+                var posAx = obj[0].X - mScroll.X;
+                var posAy = mScroll.Y - obj[0].Y;
+                for (int i = 1; i < obj.Count; i++) {
+                    var posBx = obj[i].X - mScroll.X;
+                    var posBy = mScroll.Y - obj[i].Y;
+                    mG.DrawLine(Pens.Gray, posAx, posAy, posBx, posBy);
+                    posAx = posBx;
+                    posAy = posBy;
+                }
+                foreach (var v in obj) {
+                    var px = v.X - mScroll.X;
+                    var py = mScroll.Y - v.Y;
+                    mG.FillPie(Brushes.Red, px - 2, py - 2, 5, 5, 0, 360);
+                }
+            }
         }
 
         void drawEditingLine() {
+            if (1 == mEditPoints.Count) {
+                var posAx = mEditPoints[0].X - mScroll.X;
+                var posAy = mScroll.Y - mEditPoints[0].Y;
+                var posCx = mCursor.X - mScroll.X;
+                var posCy = mScroll.Y - mCursor.Y;
+                mG.DrawLine(Pens.Cyan, posAx, posAy, posCx, posCy);
+            }
+            else if (2 <= mEditPoints.Count) {
+                var posAx = mEditPoints[0].X - mScroll.X;
+                var posAy = mScroll.Y - mEditPoints[0].Y;
+                for (int i = 1; i < mEditPoints.Count; i++) {
+                    var posBx = mEditPoints[i].X - mScroll.X;
+                    var posBy = mScroll.Y - mEditPoints[i].Y;
+                    mG.DrawLine(Pens.Gray, posAx, posAy, posBx, posBy);
+                    posAx = posBx;
+                    posAy = posBy;
+                }
+                var posCx = mCursor.X - mScroll.X;
+                var posCy = mScroll.Y - mCursor.Y;
+                mG.DrawLine(Pens.Cyan, posAx, posAy, posCx, posCy);
+            }
+            foreach (var v in mEditPoints) {
+                var px = v.X - mScroll.X;
+                var py = mScroll.Y - v.Y;
+                mG.FillPie(Brushes.Red, px - 2, py - 2, 5, 5, 0, 360);
+            }
+            var curx = mCursor.X - mScroll.X;
+            var cury = mScroll.Y - mCursor.Y;
+            mG.FillPie(Brushes.Cyan, curx - 2, cury - 2, 5, 5, 0, 360);
         }
 
         bool pointOnLine(PointF[] line, PointF p) {

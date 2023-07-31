@@ -70,11 +70,13 @@
             this.vScrollBar1 = new System.Windows.Forms.VScrollBar();
             this.hScrollBar1 = new System.Windows.Forms.HScrollBar();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.tslPos = new System.Windows.Forms.ToolStripStatusLabel();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
@@ -109,51 +111,51 @@
             // tsmFileNew
             // 
             this.tsmFileNew.Name = "tsmFileNew";
-            this.tsmFileNew.Size = new System.Drawing.Size(180, 22);
+            this.tsmFileNew.Size = new System.Drawing.Size(170, 22);
             this.tsmFileNew.Text = "新規作成";
             this.tsmFileNew.Click += new System.EventHandler(this.tsmFileNew_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(167, 6);
             // 
             // tsmFileOpen
             // 
             this.tsmFileOpen.Name = "tsmFileOpen";
-            this.tsmFileOpen.Size = new System.Drawing.Size(180, 22);
+            this.tsmFileOpen.Size = new System.Drawing.Size(170, 22);
             this.tsmFileOpen.Text = "開く";
             this.tsmFileOpen.Click += new System.EventHandler(this.tsmFileOpen_Click);
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
-            this.toolStripSeparator2.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator2.Size = new System.Drawing.Size(167, 6);
             // 
             // tsmFileOverwrite
             // 
             this.tsmFileOverwrite.Name = "tsmFileOverwrite";
             this.tsmFileOverwrite.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.tsmFileOverwrite.Size = new System.Drawing.Size(180, 22);
+            this.tsmFileOverwrite.Size = new System.Drawing.Size(170, 22);
             this.tsmFileOverwrite.Text = "上書き保存";
             this.tsmFileOverwrite.Click += new System.EventHandler(this.tsmFileOverwrite_Click);
             // 
             // tsmFileSave
             // 
             this.tsmFileSave.Name = "tsmFileSave";
-            this.tsmFileSave.Size = new System.Drawing.Size(180, 22);
+            this.tsmFileSave.Size = new System.Drawing.Size(170, 22);
             this.tsmFileSave.Text = "名前を付けて保存";
             this.tsmFileSave.Click += new System.EventHandler(this.tsmFileSave_Click);
             // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator3.Size = new System.Drawing.Size(167, 6);
             // 
             // tsmFileSavePDF
             // 
             this.tsmFileSavePDF.Name = "tsmFileSavePDF";
-            this.tsmFileSavePDF.Size = new System.Drawing.Size(180, 22);
+            this.tsmFileSavePDF.Size = new System.Drawing.Size(170, 22);
             this.tsmFileSavePDF.Text = "PDF出力";
             this.tsmFileSavePDF.Click += new System.EventHandler(this.tsmFileSavePDF_Click);
             // 
@@ -176,7 +178,7 @@
             // 
             this.tsmEditUndo.Name = "tsmEditUndo";
             this.tsmEditUndo.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Z)));
-            this.tsmEditUndo.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditUndo.Size = new System.Drawing.Size(157, 22);
             this.tsmEditUndo.Text = "元に戻す";
             this.tsmEditUndo.Click += new System.EventHandler(this.tsmEditUndo_Click);
             // 
@@ -184,7 +186,7 @@
             // 
             this.tsmEditRedo.Name = "tsmEditRedo";
             this.tsmEditRedo.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Y)));
-            this.tsmEditRedo.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditRedo.Size = new System.Drawing.Size(157, 22);
             this.tsmEditRedo.Text = "やり直し";
             this.tsmEditRedo.Click += new System.EventHandler(this.tsmEditRedo_Click);
             // 
@@ -192,20 +194,20 @@
             // 
             this.tsmEditEsc.Name = "tsmEditEsc";
             this.tsmEditEsc.ShortcutKeyDisplayString = "Esc";
-            this.tsmEditEsc.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditEsc.Size = new System.Drawing.Size(157, 22);
             this.tsmEditEsc.Text = "取り消し";
             this.tsmEditEsc.Click += new System.EventHandler(this.tsmEditEsc_Click);
             // 
             // toolStripSeparator4
             // 
             this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator4.Size = new System.Drawing.Size(154, 6);
             // 
             // tsmEditCut
             // 
             this.tsmEditCut.Name = "tsmEditCut";
             this.tsmEditCut.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.X)));
-            this.tsmEditCut.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditCut.Size = new System.Drawing.Size(157, 22);
             this.tsmEditCut.Text = "切り取り";
             this.tsmEditCut.Click += new System.EventHandler(this.tsmEditCut_Click);
             // 
@@ -213,7 +215,7 @@
             // 
             this.tsmEditCopy.Name = "tsmEditCopy";
             this.tsmEditCopy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
-            this.tsmEditCopy.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditCopy.Size = new System.Drawing.Size(157, 22);
             this.tsmEditCopy.Text = "コピー";
             this.tsmEditCopy.Click += new System.EventHandler(this.tsmEditCopy_Click);
             // 
@@ -221,7 +223,7 @@
             // 
             this.tsmEditPaste.Name = "tsmEditPaste";
             this.tsmEditPaste.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.V)));
-            this.tsmEditPaste.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditPaste.Size = new System.Drawing.Size(157, 22);
             this.tsmEditPaste.Text = "貼り付け";
             this.tsmEditPaste.Click += new System.EventHandler(this.tsmEditPaste_Click);
             // 
@@ -229,7 +231,7 @@
             // 
             this.tsmEditDelete.Name = "tsmEditDelete";
             this.tsmEditDelete.ShortcutKeys = System.Windows.Forms.Keys.Delete;
-            this.tsmEditDelete.Size = new System.Drawing.Size(180, 22);
+            this.tsmEditDelete.Size = new System.Drawing.Size(157, 22);
             this.tsmEditDelete.Text = "削除";
             this.tsmEditDelete.Click += new System.EventHandler(this.tsmEditDelete_Click);
             // 
@@ -336,21 +338,21 @@
             // tsmSnapGrid
             // 
             this.tsmSnapGrid.Name = "tsmSnapGrid";
-            this.tsmSnapGrid.Size = new System.Drawing.Size(180, 22);
+            this.tsmSnapGrid.Size = new System.Drawing.Size(151, 22);
             this.tsmSnapGrid.Text = "グリッドにスナップ";
             this.tsmSnapGrid.Click += new System.EventHandler(this.tsmSnap_Click);
             // 
             // tsmSnapVert
             // 
             this.tsmSnapVert.Name = "tsmSnapVert";
-            this.tsmSnapVert.Size = new System.Drawing.Size(180, 22);
+            this.tsmSnapVert.Size = new System.Drawing.Size(151, 22);
             this.tsmSnapVert.Text = "頂点にスナップ";
             this.tsmSnapVert.Click += new System.EventHandler(this.tsmSnap_Click);
             // 
             // tsmSnapLine
             // 
             this.tsmSnapLine.Name = "tsmSnapLine";
-            this.tsmSnapLine.Size = new System.Drawing.Size(180, 22);
+            this.tsmSnapLine.Size = new System.Drawing.Size(151, 22);
             this.tsmSnapLine.Text = "線にスナップ";
             this.tsmSnapLine.Click += new System.EventHandler(this.tsmSnap_Click);
             // 
@@ -443,6 +445,7 @@
             this.vScrollBar1.Name = "vScrollBar1";
             this.vScrollBar1.Size = new System.Drawing.Size(17, 394);
             this.vScrollBar1.TabIndex = 3;
+            this.vScrollBar1.Scroll += new System.Windows.Forms.ScrollEventHandler(this.vScrollBar1_Scroll);
             // 
             // hScrollBar1
             // 
@@ -452,15 +455,25 @@
             this.hScrollBar1.Name = "hScrollBar1";
             this.hScrollBar1.Size = new System.Drawing.Size(762, 17);
             this.hScrollBar1.TabIndex = 4;
+            this.hScrollBar1.Scroll += new System.Windows.Forms.ScrollEventHandler(this.hScrollBar1_Scroll);
             // 
             // statusStrip1
             // 
             this.statusStrip1.BackColor = System.Drawing.SystemColors.Control;
-            this.statusStrip1.Location = new System.Drawing.Point(0, 452);
+            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.tslPos});
+            this.statusStrip1.Location = new System.Drawing.Point(0, 449);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(800, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(800, 25);
             this.statusStrip1.TabIndex = 5;
             this.statusStrip1.Text = "statusStrip1";
+            // 
+            // tslPos
+            // 
+            this.tslPos.Font = new System.Drawing.Font("Yu Gothic UI", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.tslPos.Name = "tslPos";
+            this.tslPos.Size = new System.Drawing.Size(122, 20);
+            this.tslPos.Text = "0.00mm, 0.00mm";
             // 
             // timer1
             // 
@@ -490,6 +503,8 @@
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.statusStrip1.ResumeLayout(false);
+            this.statusStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -546,6 +561,7 @@
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.ToolStripMenuItem tsmDispSetGridPitch;
+        private System.Windows.Forms.ToolStripStatusLabel tslPos;
     }
 }
 
