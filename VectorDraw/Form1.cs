@@ -210,10 +210,12 @@ namespace VectorDraw {
                 if (e.Button == MouseButtons.Left) {
                     mEditPoints.Add(mCursor);
                 } else {
-                    mMouseState = MOUSE_STATE.BEGIN;
-                    mEditPoints.Add(mEditPoints[0]);
-                    mObjList.Add(new List<PointF>(mEditPoints.ToArray()));
+                    if (3 <= mEditPoints.Count) {
+                        mEditPoints.Add(mEditPoints[0]);
+                        mObjList.Add(new List<PointF>(mEditPoints.ToArray()));
+                    }
                     mEditPoints.Clear();
+                    mMouseState = MOUSE_STATE.BEGIN;
                 }
                 break;
             }
@@ -245,8 +247,8 @@ namespace VectorDraw {
 
             mG.Clear(Color.Transparent);
 
+            fillPolygon();
             drawEditingLine();
-            drawLine();
 
             pictureBox1.Image = pictureBox1.Image;
         }
@@ -301,21 +303,22 @@ namespace VectorDraw {
             sr.Dispose();
         }
 
-        void drawLine() {
-            foreach(var obj in mObjList) {
-                var posAx = obj[0].X - mScroll.X;
-                var posAy = mScroll.Y - obj[0].Y;
-                for (int i = 1; i < obj.Count; i++) {
-                    var posBx = obj[i].X - mScroll.X;
-                    var posBy = mScroll.Y - obj[i].Y;
-                    mG.DrawLine(Pens.Gray, posAx, posAy, posBx, posBy);
-                    posAx = posBx;
-                    posAy = posBy;
+        void fillPolygon() {
+            foreach (var obj in mObjList) {
+                var poly = new PointF[obj.Count];
+                for (int i = 0; i < obj.Count; i++) {
+                    poly[i].X = obj[i].X - mScroll.X;
+                    poly[i].Y = mScroll.Y - obj[i].Y;
                 }
-                foreach (var v in obj) {
-                    var px = v.X - mScroll.X;
-                    var py = mScroll.Y - v.Y;
-                    mG.FillPie(Brushes.Red, px - 2, py - 2, 5, 5, 0, 360);
+                var posA = poly[0];
+                for (int i = 1; i < poly.Length; i++) {
+                    var posB = poly[i];
+                    mG.DrawLine(Pens.Gray, posA, posB);
+                    posA = posB;
+                }
+                mG.FillPolygon(Brushes.Gray, poly);
+                foreach (var p in poly) {
+                    mG.FillPie(Brushes.Red, p.X - 2, p.Y - 2, 5, 5, 0, 360);
                 }
             }
         }
@@ -334,7 +337,7 @@ namespace VectorDraw {
                 for (int i = 1; i < mEditPoints.Count; i++) {
                     var posBx = mEditPoints[i].X - mScroll.X;
                     var posBy = mScroll.Y - mEditPoints[i].Y;
-                    mG.DrawLine(Pens.Gray, posAx, posAy, posBx, posBy);
+                    mG.DrawLine(Pens.LightGray, posAx, posAy, posBx, posBy);
                     posAx = posBx;
                     posAy = posBy;
                 }
