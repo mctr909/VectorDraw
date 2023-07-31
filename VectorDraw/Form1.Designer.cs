@@ -440,8 +440,8 @@
             // vScrollBar1
             // 
             this.vScrollBar1.Location = new System.Drawing.Point(774, 27);
-            this.vScrollBar1.Maximum = 2000;
-            this.vScrollBar1.Minimum = -2000;
+            this.vScrollBar1.Maximum = 200;
+            this.vScrollBar1.Minimum = -200;
             this.vScrollBar1.Name = "vScrollBar1";
             this.vScrollBar1.Size = new System.Drawing.Size(17, 394);
             this.vScrollBar1.TabIndex = 3;
@@ -450,8 +450,8 @@
             // hScrollBar1
             // 
             this.hScrollBar1.Location = new System.Drawing.Point(0, 424);
-            this.hScrollBar1.Maximum = 2000;
-            this.hScrollBar1.Minimum = -2000;
+            this.hScrollBar1.Maximum = 200;
+            this.hScrollBar1.Minimum = -200;
             this.hScrollBar1.Name = "hScrollBar1";
             this.hScrollBar1.Size = new System.Drawing.Size(762, 17);
             this.hScrollBar1.TabIndex = 4;

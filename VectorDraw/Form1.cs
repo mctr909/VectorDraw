@@ -20,6 +20,14 @@ namespace VectorDraw {
             DRAG,
             END
         }
+        struct Pitch {
+            public double scale;
+            public int dot;
+        }
+        Pitch mPitch = new Pitch() {
+            scale = 1,
+            dot = 10
+        };
         MODE mMode = MODE.SELECT;
         int mDispScale = 1;
         bool mSizeChange = false;
@@ -226,18 +234,18 @@ namespace VectorDraw {
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
             var mousePos = pictureBox1.PointToClient(Cursor.Position);
-            mCursor.X = mScroll.X + mousePos.X;
-            mCursor.Y = mScroll.Y - mousePos.Y;
+            mCursor.X = mScroll.X + toMill(mousePos.X);
+            mCursor.Y = mScroll.Y - toMill(mousePos.Y);
             tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X, mCursor.Y);
         }
         #endregion
 
-        private void hScrollBar1_Scroll(object sender, ScrollEventArgs e) {
-            mScroll.X = hScrollBar1.Value - mBmp.Width / 2;
+        private void hScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
+            mScroll.X = hScrollBar1.Value - toMill(mBmp.Width / 2);
         }
 
-        private void vScrollBar1_Scroll(object sender, ScrollEventArgs e) {
-            mScroll.Y = mBmp.Height / 2 - vScrollBar1.Value;
+        private void vScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
+            mScroll.Y = toMill(mBmp.Height / 2) - vScrollBar1.Value;
         }
 
         private void timer1_Tick(object sender, EventArgs e) {
@@ -284,8 +292,8 @@ namespace VectorDraw {
             mBmp = new Bitmap(Math.Max(MinimumSize.Width, pictureBox1.Width), Math.Max(MinimumSize.Height, pictureBox1.Height));
             mG = Graphics.FromImage(mBmp);
             pictureBox1.Image = mBmp;
-            mScroll.X = hScrollBar1.Value - mBmp.Width / 2;
-            mScroll.Y = mBmp.Height / 2 - vScrollBar1.Value;
+            hScrollBar1_Scroll();
+            vScrollBar1_Scroll();
         }
 
         void save(string path) {
@@ -309,6 +317,7 @@ namespace VectorDraw {
                 for (int i = 0; i < obj.Count; i++) {
                     poly[i].X = obj[i].X - mScroll.X;
                     poly[i].Y = mScroll.Y - obj[i].Y;
+                    toDot(ref poly[i]);
                 }
                 var posA = poly[0];
                 for (int i = 1; i < poly.Length; i++) {
@@ -329,30 +338,49 @@ namespace VectorDraw {
                 var posAy = mScroll.Y - mEditPoints[0].Y;
                 var posCx = mCursor.X - mScroll.X;
                 var posCy = mScroll.Y - mCursor.Y;
+                toDot(ref posAx, ref posAy);
+                toDot(ref posCx, ref posCy);
                 mG.DrawLine(Pens.Cyan, posAx, posAy, posCx, posCy);
             }
             else if (2 <= mEditPoints.Count) {
                 var posAx = mEditPoints[0].X - mScroll.X;
                 var posAy = mScroll.Y - mEditPoints[0].Y;
+                toDot(ref posAx, ref posAy);
                 for (int i = 1; i < mEditPoints.Count; i++) {
                     var posBx = mEditPoints[i].X - mScroll.X;
                     var posBy = mScroll.Y - mEditPoints[i].Y;
+                    toDot(ref posBx, ref posBy);
                     mG.DrawLine(Pens.LightGray, posAx, posAy, posBx, posBy);
                     posAx = posBx;
                     posAy = posBy;
                 }
                 var posCx = mCursor.X - mScroll.X;
                 var posCy = mScroll.Y - mCursor.Y;
+                toDot(ref posCx, ref posCy);
                 mG.DrawLine(Pens.Cyan, posAx, posAy, posCx, posCy);
             }
             foreach (var v in mEditPoints) {
                 var px = v.X - mScroll.X;
                 var py = mScroll.Y - v.Y;
+                toDot(ref px, ref py);
                 mG.FillPie(Brushes.Red, px - 2, py - 2, 5, 5, 0, 360);
             }
             var curx = mCursor.X - mScroll.X;
             var cury = mScroll.Y - mCursor.Y;
+            toDot(ref curx, ref cury);
             mG.FillPie(Brushes.Cyan, curx - 2, cury - 2, 5, 5, 0, 360);
+        }
+
+        void toDot(ref PointF pos) {
+            pos.X = (float)(pos.X * mPitch.dot / mPitch.scale);
+            pos.Y = (float)(pos.Y * mPitch.dot / mPitch.scale);
+        }
+        void toDot(ref float posX, ref float posY) {
+            posX = (float)(posX * mPitch.dot / mPitch.scale);
+            posY = (float)(posY * mPitch.dot / mPitch.scale);
+        }
+        float toMill(float v) {
+            return (float)(v * mPitch.scale / mPitch.dot);
         }
 
         bool pointOnLine(PointF[] line, PointF p) {
