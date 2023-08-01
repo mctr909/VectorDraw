@@ -28,6 +28,11 @@ namespace VectorDraw {
             scale = 1,
             dot = 10
         };
+        struct Suface {
+            public PointF a;
+            public PointF o;
+            public PointF b;
+        }
         MODE mMode = MODE.SELECT;
         int mDispScale = 1;
         bool mSizeChange = false;
@@ -381,6 +386,29 @@ namespace VectorDraw {
         }
         float toMill(float v) {
             return (float)(v * mPitch.scale / mPitch.dot);
+        }
+
+        bool hasInnerPoint(Suface s, PointF p) {
+            var aoX = s.o.X - s.a.X;
+            var aoY = s.o.Y - s.a.Y;
+            var opX = p.X - s.o.X;
+            var opY = p.Y - s.o.Y;
+            var na = aoX * opY - aoY * opX;
+            var obX = s.b.X - s.o.X;
+            var obY = s.b.Y - s.o.Y;
+            var bpX = p.X - s.b.X;
+            var bpY = p.Y - s.b.Y;
+            var no = obX * bpY - obY * bpX;
+            var baX = s.a.X - s.b.X;
+            var baY = s.a.Y - s.b.Y;
+            var apX = p.X - s.a.X;
+            var apY = p.Y - s.a.Y;
+            var nb = baX * apY - baY * apX;
+            return (0 < na && 0 < no && 0 < nb) || (na < 0 && no < 0 && nb < 0);
+        }
+
+        List<Suface> getTriangle(PointF[] poly) {
+            return new List<Suface>();
         }
 
         bool pointOnLine(PointF[] line, PointF p) {
