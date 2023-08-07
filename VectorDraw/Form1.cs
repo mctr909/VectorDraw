@@ -38,7 +38,7 @@ namespace VectorDraw {
         PointF mCursor = new PointF();
         MOUSE_STATE mMouseState = MOUSE_STATE.BEGIN;
         List<PointF> mEditPoints = new List<PointF>();
-        List<List<PointF>> mObjList = new List<List<PointF>>();
+        List<List<Geo.Surface>> mObjList = new List<List<Geo.Surface>>();
 
         public Form1() {
             InitializeComponent();
@@ -221,7 +221,16 @@ namespace VectorDraw {
                 } else {
                     if (3 <= mEditPoints.Count) {
                         mEditPoints.Add(mEditPoints[0]);
-                        mObjList.Add(new List<PointF>(mEditPoints.ToArray()));
+                        var poly = mEditPoints.ToArray();
+                        var listF = Geo.GetTriangle(poly, 1);
+                        var listR = Geo.GetTriangle(poly, -1);
+                        List<Geo.Surface> list;
+                        if (listF.Count < listR.Count) {
+                            list = listR;
+                        } else {
+                            list = listF;
+                        }
+                        mObjList.Add(list);
                     }
                     mEditPoints.Clear();
                     mMouseState = MOUSE_STATE.BEGIN;
@@ -314,21 +323,22 @@ namespace VectorDraw {
 
         void fillPolygon() {
             foreach (var obj in mObjList) {
-                var poly = new PointF[obj.Count];
-                for (int i = 0; i < obj.Count; i++) {
-                    poly[i].X = obj[i].X - mScroll.X;
-                    poly[i].Y = mScroll.Y - obj[i].Y;
-                    toDot(ref poly[i]);
-                }
-                var posA = poly[0];
-                for (int i = 1; i < poly.Length; i++) {
-                    var posB = poly[i];
-                    mG.DrawLine(Pens.Gray, posA, posB);
-                    posA = posB;
-                }
-                mG.FillPolygon(Brushes.Gray, poly);
-                foreach (var p in poly) {
-                    mG.FillPie(Brushes.Red, p.X - 2, p.Y - 2, 5, 5, 0, 360);
+                foreach (var s in obj) {
+                    var p = new PointF[] {
+                        new PointF(s.a.X - mScroll.X, mScroll.Y - s.a.Y),
+                        new PointF(s.o.X - mScroll.X, mScroll.Y - s.o.Y),
+                        new PointF(s.b.X - mScroll.X, mScroll.Y - s.b.Y)
+                    };
+                    toDot(ref p[0]);
+                    toDot(ref p[1]);
+                    toDot(ref p[2]);
+                    mG.FillPolygon(Brushes.Gray, p);
+                    mG.DrawLine(Pens.White, p[0], p[1]);
+                    mG.DrawLine(Pens.White, p[1], p[2]);
+                    mG.DrawLine(Pens.White, p[2], p[0]);
+                    mG.FillPie(Brushes.Red, p[0].X - 2, p[0].Y - 2, 5, 5, 0, 360);
+                    mG.FillPie(Brushes.Red, p[1].X - 2, p[1].Y - 2, 5, 5, 0, 360);
+                    mG.FillPie(Brushes.Red, p[2].X - 2, p[2].Y - 2, 5, 5, 0, 360);
                 }
             }
         }
