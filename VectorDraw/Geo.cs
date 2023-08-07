@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Geo;
 
 class Geo {
     public struct Surface {
@@ -16,6 +12,15 @@ class Geo {
         public double distance;
         public bool deleted;
     };
+
+    public static bool HasInnerPoint(List<Surface> poly, PointF p) {
+        foreach (var po in poly) {
+            if (HasInnerPoint(po, p)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public static bool HasInnerPoint(Surface s, PointF p) {
         return HasInnerPoint(s.a, s.o, s.b, p);

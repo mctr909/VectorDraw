@@ -323,6 +323,7 @@ namespace VectorDraw {
 
         void fillPolygon() {
             foreach (var obj in mObjList) {
+                var select = Geo.HasInnerPoint(obj, mCursor);
                 foreach (var s in obj) {
                     var p = new PointF[] {
                         new PointF(s.a.X - mScroll.X, mScroll.Y - s.a.Y),
@@ -333,12 +334,12 @@ namespace VectorDraw {
                     toDot(ref p[1]);
                     toDot(ref p[2]);
                     mG.FillPolygon(Brushes.Gray, p);
-                    mG.DrawLine(Pens.White, p[0], p[1]);
-                    mG.DrawLine(Pens.White, p[1], p[2]);
-                    mG.DrawLine(Pens.White, p[2], p[0]);
-                    mG.FillPie(Brushes.Red, p[0].X - 2, p[0].Y - 2, 5, 5, 0, 360);
-                    mG.FillPie(Brushes.Red, p[1].X - 2, p[1].Y - 2, 5, 5, 0, 360);
-                    mG.FillPie(Brushes.Red, p[2].X - 2, p[2].Y - 2, 5, 5, 0, 360);
+                    mG.DrawLine(Pens.Gray, p[0], p[1]);
+                    mG.DrawLine(Pens.Gray, p[1], p[2]);
+                    mG.DrawLine(Pens.Gray, p[2], p[0]);
+                    mG.FillPie(select ? Brushes.Cyan : Brushes.Red, p[0].X - 2, p[0].Y - 2, 5, 5, 0, 360);
+                    mG.FillPie(select ? Brushes.Cyan : Brushes.Red, p[1].X - 2, p[1].Y - 2, 5, 5, 0, 360);
+                    mG.FillPie(select ? Brushes.Cyan : Brushes.Red, p[2].X - 2, p[2].Y - 2, 5, 5, 0, 360);
                 }
             }
         }
