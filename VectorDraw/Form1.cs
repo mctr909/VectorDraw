@@ -123,6 +123,12 @@ namespace VectorDraw {
         }
 
         private void tsmEditDelete_Click(object sender, EventArgs e) {
+            for (var i = mObjList.Count - 1; 0 <= i; i--) {
+                var obj = mObjList[i];
+                if (Geo.HasInnerPoint(obj, mCursor)) {
+                    mObjList.RemoveAt(i);
+                }
+            }
         }
         #endregion
 
@@ -246,7 +252,7 @@ namespace VectorDraw {
             var mousePos = pictureBox1.PointToClient(Cursor.Position);
             mCursor.X = mScroll.X + toMill(mousePos.X);
             mCursor.Y = mScroll.Y - toMill(mousePos.Y);
-            tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X, mCursor.Y);
+            tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
         }
         #endregion
 
