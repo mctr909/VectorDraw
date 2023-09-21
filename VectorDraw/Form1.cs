@@ -5,17 +5,36 @@ using System.Windows.Forms;
 
 namespace VectorDraw {
     public partial class Form1 : Form {
+        const int KNOB_R = 2;
+        const int KNOB_D = 4;
+        static readonly Pen PGray = new Pen(Color.FromArgb(63, 63, 63), 1);
+        static readonly Pen PLine = new Pen(Color.FromArgb(191, 191, 191), 1);
+        static readonly Pen PKnob = new Pen(Color.FromArgb(191, 0, 0), 1);
+        static readonly Pen PSelect = new Pen(Color.FromArgb(0, 191, 191), 1);
+
         Bitmap mBmp;
         Graphics mG;
         bool mSizeChange = false;
         Point mScroll = new Point();
 
-        interface Record {
-            void Write(StreamWriter sw);
-            void Load(string[] cols);
+        static void DrawKnob(Graphics g, PointF pos) {
+            g.DrawArc(PKnob, pos.X - KNOB_R, pos.Y - KNOB_R, KNOB_D, KNOB_D, 0, 360);
+        }
+        static void DrawArc(Graphics g, Pen color, PointF pos, double radius, double sweep = 360, double begin = 0) {
+            g.DrawArc(color,
+                pos.X - (float)radius, pos.Y - (float)radius,
+                (float)radius * 2, (float)radius * 2,
+                (float)begin, (float)sweep
+            );
         }
 
-        struct Line : Record {
+        interface IRecord {
+            void Write(StreamWriter sw);
+            void Load(string[] cols);
+            void Draw(Graphics g, bool highlight = false);
+        }
+
+        struct Line : IRecord {
             public PointF P1;
             public PointF P2;
             public void Write(StreamWriter sw) {
@@ -30,13 +49,53 @@ namespace VectorDraw {
                 P2.X = float.Parse(cols[3]);
                 P2.Y = float.Parse(cols[4]);
             }
+            public void Draw(Graphics g, bool highlight = false) {
+                if (highlight) {
+                    g.DrawLine(PSelect, P1, P2);
+                    DrawKnob(g, P1);
+                    DrawKnob(g, P2);
+                } else {
+                    g.DrawLine(PLine, P1, P2);
+                }
+            }
         }
 
-        struct Corner : Record {
+        struct Arc : IRecord {
+            public PointF Center;
+            public double Radius;
+            public double Begin;
+            public double Sweep;
+            public void Write(StreamWriter sw) {
+                sw.WriteLine("ARC {0} {1} {2} {3} {4}",
+                    Center.X.ToString("g3"), Center.Y.ToString("g3"),
+                    Radius.ToString("g3"),
+                    Begin.ToString("g3"), Sweep.ToString("g3")
+                );
+            }
+            public void Load(string[] cols) {
+                Center.X = float.Parse(cols[1]);
+                Center.Y = float.Parse(cols[2]);
+                Radius = float.Parse(cols[3]);
+                Begin = float.Parse(cols[4]);
+                Sweep = float.Parse(cols[4]);
+            }
+            public void Draw(Graphics g, bool highlight = false) {
+                if (highlight) {
+                    DrawArc(g, PSelect, Center, Radius, (float)Sweep, (float)Begin);
+                } else {
+                    DrawArc(g, PLine, Center, Radius, (float)Sweep, (float)Begin);
+                }
+            }
+        }
+
+        struct Corner : IRecord {
             public PointF Pa;
             public PointF Po;
             public PointF Pb;
-            public double Distance;
+            public double Radius {
+                get { return mArc.Radius; }
+                set { mArc.Radius = value; }
+            }
 
             Line mL1;
             Line mL2;
@@ -47,7 +106,7 @@ namespace VectorDraw {
                     Pa.X.ToString("g3"), Pa.Y.ToString("g3"),
                     Po.X.ToString("g3"), Po.Y.ToString("g3"),
                     Pb.X.ToString("g3"), Pb.Y.ToString("g3"),
-                    Distance.ToString("g3")
+                    Radius.ToString("g3")
                 );
             }
             public void Load(string[] cols) {
@@ -57,10 +116,10 @@ namespace VectorDraw {
                 Po.Y = float.Parse(cols[4]);
                 Pb.X = float.Parse(cols[5]);
                 Pb.Y = float.Parse(cols[6]);
-                Distance = float.Parse(cols[7]);
+                Radius = float.Parse(cols[7]);
                 Calc();
             }
-            public PointF Calc(bool distance = true) {
+            public PointF Calc(double distance = 0) {
                 double oax = Pa.X - Po.X;
                 double oay = Pa.Y - Po.Y;
                 double obx = Pb.X - Po.X;
@@ -71,13 +130,15 @@ namespace VectorDraw {
                 double py = oay / oa_len + oby / ob_len;
                 double p_len = Math.Sqrt(px * px + py * py);
 
-                if (distance) {
-                    px *= Distance / p_len;
-                    py *= Distance / p_len;
-                } else {
+                if (distance == 0) {
                     px /= p_len;
                     py /= p_len;
-                    return new PointF((float)px, (float)py);
+                    var d = Radius / Math.Sin(Math.Abs(Math.Atan2(py, px) - Math.Atan2(oay, oax)));
+                    px *= d;
+                    py *= d;
+                } else {
+                    px *= distance / p_len;
+                    py *= distance / p_len;
                 }
 
                 double t = (oax * px + oay * py) / oa_len / oa_len;
@@ -120,43 +181,25 @@ namespace VectorDraw {
                 mArc.Center.Y = Po.Y + (float)py;
                 return mArc.Center;
             }
-            public void Draw(Graphics g, bool dispKnob = false) {
-                g.DrawLine(Pens.White, mL1.P1, mL1.P2);
-                g.DrawLine(Pens.White, mL2.P1, mL2.P2);
-                if (dispKnob) {
-                    g.DrawLine(Pens.Gray, mL1.P2, Po);
-                    g.DrawLine(Pens.Gray, Po, mL2.P1);
-                    g.DrawArc(Pens.Red, Po.X - 2, Po.Y - 2, 4, 4, 0, 360);
-                    g.DrawArc(Pens.Red, Pa.X - 2, Pa.Y - 2, 4, 4, 0, 360);
-                    g.DrawArc(Pens.Red, Pb.X - 2, Pb.Y - 2, 4, 4, 0, 360);
-                    g.DrawArc(Pens.Cyan, mArc.Center.X - 2, mArc.Center.Y - 2, 4, 4, 0, 360);
+            public void Draw(Graphics g, bool highlight = false) {
+                if (highlight) {
+                    g.DrawLine(PGray, mL1.P2, Po);
+                    g.DrawLine(PGray, Po, mL2.P1);
+                    DrawArc(g, PGray, mArc.Center, mArc.Radius);
+                    g.DrawLine(PSelect, mL1.P1, mL1.P2);
+                    g.DrawLine(PSelect, mL2.P1, mL2.P2);
+                    DrawArc(g, PSelect, mArc.Center,
+                        mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
+                    DrawKnob(g, mArc.Center);
+                    DrawKnob(g, Po);
+                    DrawKnob(g, Pa);
+                    DrawKnob(g, Pb);
+                } else {
+                    g.DrawLine(PLine, mL1.P1, mL1.P2);
+                    g.DrawLine(PLine, mL2.P1, mL2.P2);
+                    DrawArc(g, PLine, mArc.Center,
+                        mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
                 }
-                g.DrawArc(Pens.White,
-                    mArc.Center.X - (float)mArc.Radius, mArc.Center.Y - (float)mArc.Radius,
-                    (float)mArc.Radius * 2, (float)mArc.Radius * 2,
-                    (float)mArc.Begin, (float)mArc.Sweep
-                );
-            }
-        }
-
-        struct Arc : Record {
-            public PointF Center;
-            public double Radius;
-            public double Begin;
-            public double Sweep;
-            public void Write(StreamWriter sw) {
-                sw.WriteLine("ARC {0} {1} {2} {3} {4}",
-                    Center.X.ToString("g3"), Center.Y.ToString("g3"),
-                    Radius.ToString("g3"),
-                    Begin.ToString("g3"), Sweep.ToString("g3")
-                );
-            }
-            public void Load(string[] cols) {
-                Center.X = float.Parse(cols[1]);
-                Center.Y = float.Parse(cols[2]);
-                Radius = float.Parse(cols[3]);
-                Begin = float.Parse(cols[4]);
-                Sweep = float.Parse(cols[4]);
             }
         }
 
@@ -167,6 +210,9 @@ namespace VectorDraw {
         private void Form1_Load(object sender, EventArgs e) {
             sizeChange();
             KeyPreview = true;
+            timer1.Enabled = true;
+            timer1.Interval = 16;
+            timer1.Start();
         }
 
         private void Form1_SizeChanged(object sender, EventArgs e) {
@@ -337,6 +383,17 @@ namespace VectorDraw {
                 sizeChange();
                 mSizeChange = false;
             }
+            var c = new Corner();
+            c.Po.X = 200;
+            c.Po.Y = 200;
+            c.Pa.X = c.Po.X + 120;
+            c.Pb.X = c.Po.X + 80;
+            c.Pa.Y = c.Po.Y + 50;
+            c.Pb.Y = c.Po.Y - 50;
+            c.Radius = 20;
+
+            c.Calc();
+            c.Draw(mG);
         }
 
         void sizeChange() {
