@@ -1,44 +1,164 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
 namespace VectorDraw {
     public partial class Form1 : Form {
-        enum MODE {
-            SELECT,
-            MOVE_ORIGIN,
-            POLYLINE,
-            POLYGON_FILL,
-            POLYGON_HOLE,
-            POLYGON_FILL_ARC,
-            POLYGON_HOLE_ARC
-        }
-        enum MOUSE_STATE {
-            BEGIN,
-            DRAG,
-            END
-        }
-        struct Pitch {
-            public double scale;
-            public int dot;
-        }
-        Pitch mPitch = new Pitch() {
-            scale = 1,
-            dot = 10
-        };
-
-        MODE mMode = MODE.SELECT;
-        int mDispScale = 1;
-        bool mSizeChange = false;
         Bitmap mBmp;
         Graphics mG;
-        PointF mScroll = new PointF();
-        PointF mCursor = new PointF();
-        MOUSE_STATE mMouseState = MOUSE_STATE.BEGIN;
-        List<PointF> mEditPoints = new List<PointF>();
-        List<List<Geo.Surface>> mObjList = new List<List<Geo.Surface>>();
+        bool mSizeChange = false;
+        Point mScroll = new Point();
+
+        interface Record {
+            void Write(StreamWriter sw);
+            void Load(string[] cols);
+        }
+
+        struct Line : Record {
+            public PointF P1;
+            public PointF P2;
+            public void Write(StreamWriter sw) {
+                sw.WriteLine("LINE {0} {1} {2} {3}",
+                    P1.X.ToString("g3"), P1.Y.ToString("g3"),
+                    P2.X.ToString("g3"), P2.Y.ToString("g3")
+                );
+            }
+            public void Load(string[] cols) {
+                P1.X = float.Parse(cols[1]);
+                P1.Y = float.Parse(cols[2]);
+                P2.X = float.Parse(cols[3]);
+                P2.Y = float.Parse(cols[4]);
+            }
+        }
+
+        struct Corner : Record {
+            public PointF Pa;
+            public PointF Po;
+            public PointF Pb;
+            public double Distance;
+
+            Line mL1;
+            Line mL2;
+            Arc mArc;
+
+            public void Write(StreamWriter sw) {
+                sw.WriteLine("CORNER {0} {1} {2} {3} {4} {5} {6}",
+                    Pa.X.ToString("g3"), Pa.Y.ToString("g3"),
+                    Po.X.ToString("g3"), Po.Y.ToString("g3"),
+                    Pb.X.ToString("g3"), Pb.Y.ToString("g3"),
+                    Distance.ToString("g3")
+                );
+            }
+            public void Load(string[] cols) {
+                Pa.X = float.Parse(cols[1]);
+                Pa.Y = float.Parse(cols[2]);
+                Po.X = float.Parse(cols[3]);
+                Po.Y = float.Parse(cols[4]);
+                Pb.X = float.Parse(cols[5]);
+                Pb.Y = float.Parse(cols[6]);
+                Distance = float.Parse(cols[7]);
+                Calc();
+            }
+            public PointF Calc(bool distance = true) {
+                double oax = Pa.X - Po.X;
+                double oay = Pa.Y - Po.Y;
+                double obx = Pb.X - Po.X;
+                double oby = Pb.Y - Po.Y;
+                double oa_len = Math.Sqrt(oax * oax + oay * oay);
+                double ob_len = Math.Sqrt(obx * obx + oby * oby);
+                double px = oax / oa_len + obx / ob_len;
+                double py = oay / oa_len + oby / ob_len;
+                double p_len = Math.Sqrt(px * px + py * py);
+
+                if (distance) {
+                    px *= Distance / p_len;
+                    py *= Distance / p_len;
+                } else {
+                    px /= p_len;
+                    py /= p_len;
+                    return new PointF((float)px, (float)py);
+                }
+
+                double t = (oax * px + oay * py) / oa_len / oa_len;
+                double u = (obx * px + oby * py) / ob_len / ob_len;
+                double oapx = t * oax;
+                double oapy = t * oay;
+                double obpx = u * obx;
+                double obpy = u * oby;
+
+                mL1.P1 = Pa;
+                mL1.P2.X = (float)(Po.X + oapx);
+                mL1.P2.Y = (float)(Po.Y + oapy);
+                mL2.P1.X = (float)(Po.X + obpx);
+                mL2.P1.Y = (float)(Po.Y + obpy);
+                mL2.P2 = Pb;
+
+                var qx = oapx - px;
+                var qy = oapy - py;
+                var q_arg = Math.Atan2(qy, qx);
+                if (q_arg < 0) {
+                    q_arg += Math.PI * 2;
+                }
+                var rx = obpx - px;
+                var ry = obpy - py;
+                var r_arg = Math.Atan2(ry, rx);
+                if (r_arg < 0) {
+                    r_arg += Math.PI * 2;
+                }
+
+                if (q_arg < r_arg) {
+                    mArc.Begin = q_arg * 180 / Math.PI;
+                    mArc.Sweep = (r_arg - q_arg) * 180 / Math.PI;
+                } else {
+                    mArc.Begin = r_arg * 180 / Math.PI;
+                    mArc.Sweep = (q_arg - r_arg) * 180 / Math.PI;
+                }
+
+                mArc.Radius = Math.Sqrt(qx * qx + qy * qy);
+                mArc.Center.X = Po.X + (float)px;
+                mArc.Center.Y = Po.Y + (float)py;
+                return mArc.Center;
+            }
+            public void Draw(Graphics g, bool dispKnob = false) {
+                g.DrawLine(Pens.White, mL1.P1, mL1.P2);
+                g.DrawLine(Pens.White, mL2.P1, mL2.P2);
+                if (dispKnob) {
+                    g.DrawLine(Pens.Gray, mL1.P2, Po);
+                    g.DrawLine(Pens.Gray, Po, mL2.P1);
+                    g.DrawArc(Pens.Red, Po.X - 2, Po.Y - 2, 4, 4, 0, 360);
+                    g.DrawArc(Pens.Red, Pa.X - 2, Pa.Y - 2, 4, 4, 0, 360);
+                    g.DrawArc(Pens.Red, Pb.X - 2, Pb.Y - 2, 4, 4, 0, 360);
+                    g.DrawArc(Pens.Cyan, mArc.Center.X - 2, mArc.Center.Y - 2, 4, 4, 0, 360);
+                }
+                g.DrawArc(Pens.White,
+                    mArc.Center.X - (float)mArc.Radius, mArc.Center.Y - (float)mArc.Radius,
+                    (float)mArc.Radius * 2, (float)mArc.Radius * 2,
+                    (float)mArc.Begin, (float)mArc.Sweep
+                );
+            }
+        }
+
+        struct Arc : Record {
+            public PointF Center;
+            public double Radius;
+            public double Begin;
+            public double Sweep;
+            public void Write(StreamWriter sw) {
+                sw.WriteLine("ARC {0} {1} {2} {3} {4}",
+                    Center.X.ToString("g3"), Center.Y.ToString("g3"),
+                    Radius.ToString("g3"),
+                    Begin.ToString("g3"), Sweep.ToString("g3")
+                );
+            }
+            public void Load(string[] cols) {
+                Center.X = float.Parse(cols[1]);
+                Center.Y = float.Parse(cols[2]);
+                Radius = float.Parse(cols[3]);
+                Begin = float.Parse(cols[4]);
+                Sweep = float.Parse(cols[4]);
+            }
+        }
 
         public Form1() {
             InitializeComponent();
@@ -47,26 +167,30 @@ namespace VectorDraw {
         private void Form1_Load(object sender, EventArgs e) {
             sizeChange();
             KeyPreview = true;
-            timer1.Interval = 33;
-            timer1.Enabled = true;
-            timer1.Start();
         }
 
         private void Form1_SizeChanged(object sender, EventArgs e) {
             mSizeChange = true;
         }
 
-        private void Form1_KeyDown(object sender, KeyEventArgs e) {
-            switch (e.KeyCode) {
+        private void Form1_KeyUp(object sender, KeyEventArgs e) {
+            switch(e.KeyCode) {
             case Keys.Escape:
-                tsmEditEsc_Click(sender, e);
+                tsmEditEsc_Click(null, null);
                 break;
             }
         }
 
+        private void hScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
+            mScroll.X = hScrollBar1.Value;
+        }
+
+        private void vScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
+            mScroll.Y = vScrollBar1.Value;
+        }
+
         #region Menu[File] events
         private void tsmFileNew_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmFileOpen_Click(object sender, EventArgs e) {
@@ -76,11 +200,15 @@ namespace VectorDraw {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) {
                 return;
             }
+            Text = path;
             load(path);
         }
 
         private void tsmFileOverwrite_Click(object sender, EventArgs e) {
-
+            if (string.IsNullOrWhiteSpace(Text) || !Directory.Exists(Path.GetDirectoryName(Text))) {
+                return;
+            }
+            save(Text);
         }
 
         private void tsmFileSave_Click(object sender, EventArgs e) {
@@ -90,51 +218,39 @@ namespace VectorDraw {
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(Path.GetDirectoryName(path))) {
                 return;
             }
+            Text = path;
             save(path);
         }
 
         private void tsmFileSavePDF_Click(object sender, EventArgs e) {
-
         }
         #endregion
 
         #region Menu[Edit] events
         private void tsmEditUndo_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmEditRedo_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmEditEsc_Click(object sender, EventArgs e) {
         }
 
         private void tsmEditCut_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmEditCopy_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmEditPaste_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmEditDelete_Click(object sender, EventArgs e) {
-            for (var i = mObjList.Count - 1; 0 <= i; i--) {
-                var obj = mObjList[i];
-                if (Geo.HasInnerPoint(obj, mCursor)) {
-                    mObjList.RemoveAt(i);
-                }
-            }
         }
         #endregion
 
         #region Menu[Display] events
         private void tsmDispMoveToLocalOrigin_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmDispMoveToGlobalOrigin_Click(object sender, EventArgs e) {
@@ -143,37 +259,27 @@ namespace VectorDraw {
         }
 
         private void tsmDisp100_Click(object sender, EventArgs e) {
-            mDispScale = 1;
         }
 
         private void tsmDispZoomIn_Click(object sender, EventArgs e) {
-            if (mDispScale < 16) {
-                mDispScale++;
-            }
         }
 
         private void tsmDispZoomOut_Click(object sender, EventArgs e) {
-            if (1 < mDispScale) {
-                mDispScale--;
-            }
         }
 
         private void tsmDispSetGridPitch_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmDispLocalGrid_Click(object sender, EventArgs e) {
-
         }
 
         private void tsmDispGlobalGrid_Click(object sender, EventArgs e) {
-
         }
         #endregion
 
         private void tsmSnap_Click(object sender, EventArgs e) {
-            var obj = (ToolStripMenuItem)sender;
-            obj.Checked = !obj.Checked;
+            var item = (ToolStripMenuItem)sender;
+            item.Checked = !item.Checked;
         }
 
         private void tsmMode_Click(object sender, EventArgs e) {
@@ -182,67 +288,39 @@ namespace VectorDraw {
             tsmModePolyline.Checked = false;
             tsmModePolygonFill.Checked = false;
             tsmModePolygonHole.Checked = false;
-            var obj = (ToolStripMenuItem)sender;
-            if (obj == tsmModeSelect) {
-                obj.Checked = true;
-                mMode = MODE.SELECT;
-                mMouseState = MOUSE_STATE.BEGIN;
+
+            var item = (ToolStripMenuItem)sender;
+            item.Checked = true;
+
+            if (item == tsmModeSelect) {
+                //mMode = MODE.SELECT;
+                //mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
-            if (obj == tsmModeMoveLocalOrigin) {
-                obj.Checked = true;
-                mMode = MODE.MOVE_ORIGIN;
-                mMouseState = MOUSE_STATE.BEGIN;
+            if (item == tsmModeMoveLocalOrigin) {
+                //mMode = MODE.MOVE_ORIGIN;
+                //mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
-            if (obj == tsmModePolyline) {
-                obj.Checked = true;
-                mMode = MODE.POLYLINE;
-                mMouseState = MOUSE_STATE.BEGIN;
+            if (item == tsmModePolyline) {
+                //mMode = MODE.POLYLINE;
+                //mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
-            if (obj == tsmModePolygonFill) {
-                obj.Checked = true;
-                mMode = MODE.POLYGON_FILL;
-                mMouseState = MOUSE_STATE.BEGIN;
+            if (item == tsmModePolygonFill) {
+                //mMode = MODE.POLYGON_FILL;
+                //mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
-            if (obj == tsmModePolygonHole) {
-                obj.Checked = true;
-                mMode = MODE.POLYGON_HOLE;
-                mMouseState = MOUSE_STATE.BEGIN;
+            if (item == tsmModePolygonHole) {
+                //mMode = MODE.POLYGON_HOLE;
+                //mMouseState = MOUSE_STATE.BEGIN;
                 return;
             }
         }
 
         #region PictureBox events
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
-            switch (mMouseState) {
-            case MOUSE_STATE.BEGIN:
-                mEditPoints.Add(mCursor);
-                mMouseState = MOUSE_STATE.DRAG; break;
-            case MOUSE_STATE.DRAG:
-                if (e.Button == MouseButtons.Left) {
-                    mEditPoints.Add(mCursor);
-                } else {
-                    if (3 <= mEditPoints.Count) {
-                        mEditPoints.Add(mEditPoints[0]);
-                        var poly = mEditPoints.ToArray();
-                        var listF = Geo.GetTriangle(poly, 1);
-                        var listR = Geo.GetTriangle(poly, -1);
-                        List<Geo.Surface> list;
-                        if (listF.Count < listR.Count) {
-                            list = listR;
-                        } else {
-                            list = listF;
-                        }
-                        mObjList.Add(list);
-                    }
-                    mEditPoints.Clear();
-                    mMouseState = MOUSE_STATE.BEGIN;
-                }
-                break;
-            }
         }
 
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e) {
@@ -250,31 +328,15 @@ namespace VectorDraw {
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
             var mousePos = pictureBox1.PointToClient(Cursor.Position);
-            mCursor.X = mScroll.X + toMill(mousePos.X);
-            mCursor.Y = mScroll.Y - toMill(mousePos.Y);
-            tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
+            //tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
         }
         #endregion
-
-        private void hScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
-            mScroll.X = hScrollBar1.Value - toMill(mBmp.Width / 2);
-        }
-
-        private void vScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
-            mScroll.Y = toMill(mBmp.Height / 2) - vScrollBar1.Value;
-        }
 
         private void timer1_Tick(object sender, EventArgs e) {
             if (mSizeChange) {
                 sizeChange();
+                mSizeChange = false;
             }
-
-            mG.Clear(Color.Transparent);
-
-            fillPolygon();
-            drawEditingLine();
-
-            pictureBox1.Image = pictureBox1.Image;
         }
 
         void sizeChange() {
@@ -326,86 +388,5 @@ namespace VectorDraw {
             sr.Close();
             sr.Dispose();
         }
-
-        void fillPolygon() {
-            foreach (var obj in mObjList) {
-                var select = Geo.HasInnerPoint(obj, mCursor);
-                foreach (var s in obj) {
-                    var p = new PointF[] {
-                        new PointF(s.a.X - mScroll.X, mScroll.Y - s.a.Y),
-                        new PointF(s.o.X - mScroll.X, mScroll.Y - s.o.Y),
-                        new PointF(s.b.X - mScroll.X, mScroll.Y - s.b.Y)
-                    };
-                    toDot(ref p[0]);
-                    toDot(ref p[1]);
-                    toDot(ref p[2]);
-                    mG.FillPolygon(Brushes.Gray, p);
-                    mG.DrawLine(Pens.Gray, p[0], p[1]);
-                    mG.DrawLine(Pens.Gray, p[1], p[2]);
-                    mG.DrawLine(Pens.Gray, p[2], p[0]);
-                    mG.FillPie(select ? Brushes.Cyan : Brushes.Red, p[0].X - 2, p[0].Y - 2, 5, 5, 0, 360);
-                    mG.FillPie(select ? Brushes.Cyan : Brushes.Red, p[1].X - 2, p[1].Y - 2, 5, 5, 0, 360);
-                    mG.FillPie(select ? Brushes.Cyan : Brushes.Red, p[2].X - 2, p[2].Y - 2, 5, 5, 0, 360);
-                }
-            }
-        }
-
-        void drawEditingLine() {
-            if (1 == mEditPoints.Count) {
-                var posAx = mEditPoints[0].X - mScroll.X;
-                var posAy = mScroll.Y - mEditPoints[0].Y;
-                var posCx = mCursor.X - mScroll.X;
-                var posCy = mScroll.Y - mCursor.Y;
-                toDot(ref posAx, ref posAy);
-                toDot(ref posCx, ref posCy);
-                mG.DrawLine(Pens.Cyan, posAx, posAy, posCx, posCy);
-            }
-            else if (2 <= mEditPoints.Count) {
-                var posAx = mEditPoints[0].X - mScroll.X;
-                var posAy = mScroll.Y - mEditPoints[0].Y;
-                toDot(ref posAx, ref posAy);
-                for (int i = 1; i < mEditPoints.Count; i++) {
-                    var posBx = mEditPoints[i].X - mScroll.X;
-                    var posBy = mScroll.Y - mEditPoints[i].Y;
-                    toDot(ref posBx, ref posBy);
-                    mG.DrawLine(Pens.LightGray, posAx, posAy, posBx, posBy);
-                    posAx = posBx;
-                    posAy = posBy;
-                }
-                var posCx = mCursor.X - mScroll.X;
-                var posCy = mScroll.Y - mCursor.Y;
-                toDot(ref posCx, ref posCy);
-                mG.DrawLine(Pens.Cyan, posAx, posAy, posCx, posCy);
-            }
-            foreach (var v in mEditPoints) {
-                var px = v.X - mScroll.X;
-                var py = mScroll.Y - v.Y;
-                toDot(ref px, ref py);
-                mG.FillPie(Brushes.Red, px - 2, py - 2, 5, 5, 0, 360);
-            }
-            var curx = mCursor.X - mScroll.X;
-            var cury = mScroll.Y - mCursor.Y;
-            toDot(ref curx, ref cury);
-            mG.FillPie(Brushes.Cyan, curx - 2, cury - 2, 5, 5, 0, 360);
-        }
-
-        void toDot(ref PointF pos) {
-            pos.X = (float)(pos.X * mPitch.dot / mPitch.scale);
-            pos.Y = (float)(pos.Y * mPitch.dot / mPitch.scale);
-        }
-        void toDot(ref float posX, ref float posY) {
-            posX = (float)(posX * mPitch.dot / mPitch.scale);
-            posY = (float)(posY * mPitch.dot / mPitch.scale);
-        }
-        float toMill(float v) {
-            return (float)(v * mPitch.scale / mPitch.dot);
-        }
-
-
-        bool pointOnLine(PointF[] line, PointF p) {
-            return false;
-        }
-
-
     }
 }
