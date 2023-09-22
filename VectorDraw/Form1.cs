@@ -5,6 +5,20 @@ using System.Windows.Forms;
 
 namespace VectorDraw {
     public partial class Form1 : Form {
+        enum MOUSE_MODE {
+            SELECT,
+            GRIP_POST,
+            GRIP_ITEMS,
+            ARC_POS,
+            ARC_RADIUS,
+            ARC_BEGIN,
+            ARC_END,
+            BOW_BEGIN,
+            BOW_END,
+            BOW_RADIUS,
+            POLYLINE
+        }
+
         const int KNOB_R = 2;
         const int KNOB_D = 4;
         static readonly Pen PGray = new Pen(Color.FromArgb(63, 63, 63), 1);
@@ -88,6 +102,61 @@ namespace VectorDraw {
             }
         }
 
+        struct Bow : IRecord {
+            public PointF P1;
+            public PointF P2;
+            public double Radius {
+                get { return mArc.Radius; }
+                set { mArc.Radius = value; }
+            }
+
+            Arc mArc;
+
+            public void Write(StreamWriter sw) {
+                sw.WriteLine("BOW {0} {1} {2} {3} {4}",
+                    P1.X.ToString("g3"), P1.Y.ToString("g3"),
+                    P2.X.ToString("g3"), P2.Y.ToString("g3"),
+                    Radius.ToString("g3")
+                );
+            }
+            public void Load(string[] cols) {
+                P1.X = float.Parse(cols[1]);
+                P1.Y = float.Parse(cols[2]);
+                P2.X = float.Parse(cols[3]);
+                P2.Y = float.Parse(cols[4]);
+                Radius = float.Parse(cols[5]);
+            }
+            public void Draw(Graphics g, bool highlight = false) {
+                if (highlight) {
+                    DrawArc(g, PSelect, mArc.Center, Math.Abs(mArc.Radius),
+                        (float)mArc.Sweep, (float)mArc.Begin);
+                } else {
+                    DrawArc(g, PLine, mArc.Center, Math.Abs(mArc.Radius),
+                        (float)mArc.Sweep, (float)mArc.Begin);
+                }
+            }
+            public PointF Calc(double distance = 0) {
+                var abx = P2.X - P1.X;
+                var aby = P2.Y - P1.Y;
+                var ab_len = Math.Sqrt(abx * abx + aby * aby);
+                var ab_arg = Math.Atan2(aby, abx);
+                var bao_arg = Math.Acos(ab_len / mArc.Radius * 0.5);
+                var ox = P1.X + mArc.Radius * Math.Cos(bao_arg + ab_arg);
+                var oy = P1.Y + mArc.Radius * Math.Sin(bao_arg + ab_arg);
+                var oax = P1.X - ox;
+                var oay = P1.Y - oy;
+                var obx = P2.X - ox;
+                var oby = P2.Y - oy;
+                var oa_deg = Math.Atan2(oay, oax) * 180 / Math.PI;
+                var ob_deg = Math.Atan2(oby, obx) * 180 / Math.PI;
+                mArc.Begin = oa_deg;
+                mArc.Sweep = ob_deg - oa_deg;
+                mArc.Center.X = (float)ox;
+                mArc.Center.Y = (float)oy;
+                return mArc.Center;
+            }
+        }
+
         struct Corner : IRecord {
             public PointF Pa;
             public PointF Po;
@@ -118,6 +187,26 @@ namespace VectorDraw {
                 Pb.Y = float.Parse(cols[6]);
                 Radius = float.Parse(cols[7]);
                 Calc();
+            }
+            public void Draw(Graphics g, bool highlight = false) {
+                if (highlight) {
+                    g.DrawLine(PGray, mL1.P2, Po);
+                    g.DrawLine(PGray, Po, mL2.P1);
+                    DrawArc(g, PGray, mArc.Center, mArc.Radius);
+                    g.DrawLine(PSelect, mL1.P1, mL1.P2);
+                    g.DrawLine(PSelect, mL2.P1, mL2.P2);
+                    DrawArc(g, PSelect, mArc.Center,
+                        mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
+                    DrawKnob(g, mArc.Center);
+                    DrawKnob(g, Po);
+                    DrawKnob(g, Pa);
+                    DrawKnob(g, Pb);
+                } else {
+                    g.DrawLine(PLine, mL1.P1, mL1.P2);
+                    g.DrawLine(PLine, mL2.P1, mL2.P2);
+                    DrawArc(g, PLine, mArc.Center,
+                        mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
+                }
             }
             public PointF Calc(double distance = 0) {
                 double oax = Pa.X - Po.X;
@@ -180,26 +269,6 @@ namespace VectorDraw {
                 mArc.Center.X = Po.X + (float)px;
                 mArc.Center.Y = Po.Y + (float)py;
                 return mArc.Center;
-            }
-            public void Draw(Graphics g, bool highlight = false) {
-                if (highlight) {
-                    g.DrawLine(PGray, mL1.P2, Po);
-                    g.DrawLine(PGray, Po, mL2.P1);
-                    DrawArc(g, PGray, mArc.Center, mArc.Radius);
-                    g.DrawLine(PSelect, mL1.P1, mL1.P2);
-                    g.DrawLine(PSelect, mL2.P1, mL2.P2);
-                    DrawArc(g, PSelect, mArc.Center,
-                        mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
-                    DrawKnob(g, mArc.Center);
-                    DrawKnob(g, Po);
-                    DrawKnob(g, Pa);
-                    DrawKnob(g, Pb);
-                } else {
-                    g.DrawLine(PLine, mL1.P1, mL1.P2);
-                    g.DrawLine(PLine, mL2.P1, mL2.P2);
-                    DrawArc(g, PLine, mArc.Center,
-                        mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
-                }
             }
         }
 
@@ -383,15 +452,18 @@ namespace VectorDraw {
                 sizeChange();
                 mSizeChange = false;
             }
-            var c = new Corner();
-            c.Po.X = 200;
-            c.Po.Y = 200;
-            c.Pa.X = c.Po.X + 120;
-            c.Pb.X = c.Po.X + 80;
-            c.Pa.Y = c.Po.Y + 50;
-            c.Pb.Y = c.Po.Y - 50;
-            c.Radius = 20;
+            var c = new Bow();
+            c.P1.X = 400;
+            c.P1.Y = 200;
+            var th = Math.PI * 10 / 180;
+            c.P2.X = c.P1.X + 300 * (float)Math.Cos(th);
+            c.P2.Y = c.P1.Y - 300 * (float)Math.Sin(th);
 
+            c.Radius = 160;
+            c.Calc();
+            c.Draw(mG);
+
+            c.Radius = -160;
             c.Calc();
             c.Draw(mG);
         }
