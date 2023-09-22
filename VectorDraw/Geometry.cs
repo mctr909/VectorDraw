@@ -212,6 +212,18 @@ namespace VectorDraw {
 
             double t = (oax * px + oay * py) / oa_len / oa_len;
             double u = (obx * px + oby * py) / ob_len / ob_len;
+            if (t < 0) {
+                t = 0;
+            }
+            if (1 < t) {
+                t = 1;
+            }
+            if (u < 0) {
+                u = 0;
+            }
+            if (1 < u) {
+                u = 1;
+            }
             double oapx = t * oax;
             double oapy = t * oay;
             double obpx = u * obx;

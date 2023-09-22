@@ -200,26 +200,33 @@ namespace VectorDraw {
         }
         #endregion
 
+        int cnt = 0;
+        const int DELTA = 480;
+
         private void timer1_Tick(object sender, EventArgs e) {
             if (mSizeChange) {
                 sizeChange();
                 mSizeChange = false;
             }
+            mG.Clear(Color.Black);
+
             var c = new Bow();
-            c.P1.X = 400;
-            c.P1.Y = 200;
-            var th = Math.PI * 10 / 180;
-            c.P2.X = c.P1.X + 300 * (float)Math.Cos(th);
-            c.P2.Y = c.P1.Y - 300 * (float)Math.Sin(th);
+            c.P1.X = 300;
+            c.P1.Y = 400;
+            var th = -2 * Math.PI * cnt / DELTA + Math.PI / 2;
+            c.P2.X = c.P1.X + 200 * (float)Math.Cos(th);
+            c.P2.Y = c.P1.Y - 200 * (float)Math.Sin(th);
 
-            c.Radius = 160;
+            c.Radius = 110;
             c.Calc();
             c.Draw(mG);
 
-            c.Radius = -160;
-            c.Calc();
-            c.Draw(mG);
 
+            c.Radius = -110;
+            c.Calc();
+            c.Draw(mG, true);
+
+            cnt = (++cnt % DELTA);
             pictureBox1.Image = pictureBox1.Image;
         }
 
