@@ -19,11 +19,12 @@ namespace VectorDraw {
             POLYLINE
         }
 
-
         Bitmap mBmp;
         Graphics mG;
         bool mSizeChange = false;
         Point mScroll = new Point();
+        Point mCursor = new Point();
+        MOUSE_MODE mMode = MOUSE_MODE.SELECT;
 
         public Form1() {
             InitializeComponent();
@@ -195,7 +196,7 @@ namespace VectorDraw {
         }
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
-            var mousePos = pictureBox1.PointToClient(Cursor.Position);
+            mCursor = pictureBox1.PointToClient(Cursor.Position);
             //tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
         }
         #endregion
@@ -211,20 +212,22 @@ namespace VectorDraw {
             mG.Clear(Color.Black);
 
             var c = new Bow();
-            c.P1.X = 300;
-            c.P1.Y = 400;
-            var th = -2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            c.P2.X = c.P1.X + 200 * (float)Math.Cos(th);
-            c.P2.Y = c.P1.Y - 200 * (float)Math.Sin(th);
+            c.Pa.X = 300;
+            c.Pa.Y = 400;
 
-            c.Radius = 110;
+            c.Radius = 120;
+            var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+            c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
+            c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
             c.Calc();
-            c.Draw(mG);
+            c.Draw(mG, c.GetGippedPost(mCursor) != EPOST.NONE);
 
-
-            c.Radius = -110;
+            c.Radius = -120;
+            th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+            c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
+            c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
             c.Calc();
-            c.Draw(mG, true);
+            c.Draw(mG, c.GetGippedPost(mCursor) != EPOST.NONE);
 
             cnt = (++cnt % DELTA);
             pictureBox1.Image = pictureBox1.Image;

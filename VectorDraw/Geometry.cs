@@ -4,14 +4,23 @@ using System.IO;
 
 namespace VectorDraw {
     static class Geo {
-        public const int KNOB_R = 2;
-        public const int KNOB_D = 4;
+        public const int POST_RADIUS = 3;
         public static readonly Pen PGray = new Pen(Color.FromArgb(63, 63, 63), 1);
         public static readonly Pen PLine = new Pen(Color.FromArgb(191, 191, 191), 1);
-        public static readonly Pen PKnob = new Pen(Color.FromArgb(191, 0, 0), 1);
+        public static readonly Pen PPost = new Pen(Color.FromArgb(191, 0, 0), 1);
         public static readonly Pen PSelect = new Pen(Color.FromArgb(0, 191, 191), 1);
-        public static void DrawKnob(Graphics g, PointF pos) {
-            g.DrawArc(PKnob, pos.X - KNOB_R, pos.Y - KNOB_R, KNOB_D, KNOB_D, 0, 360);
+        public static bool HasGrippedPost(PointF post, Point cursor) {
+            var opx = post.X - cursor.X;
+            var opy = post.Y - cursor.Y;
+            return Math.Sqrt(opx * opx + opy * opy) <= POST_RADIUS;
+        }
+        public static void DrawPost(Graphics g, PointF pos) {
+            const int diameter = POST_RADIUS * 2;
+            g.DrawArc(PPost,
+                pos.X - POST_RADIUS, pos.Y - POST_RADIUS,
+                diameter, diameter,
+                0, 360
+            );
         }
         public static void DrawArc(Graphics g, Pen color, PointF pos, double radius, double sweep = 360, double begin = 0) {
             g.DrawArc(color,
@@ -21,70 +30,109 @@ namespace VectorDraw {
             );
         }
     }
+    
+    public enum EPOST { NONE, A, B, O }
 
     interface IGeo {
+        EPOST GetGippedPost(Point p);
         void Write(StreamWriter sw);
         void Load(string[] cols);
         void Draw(Graphics g, bool highlight = false);
     }
 
     struct Line : IGeo {
-        public PointF P1;
-        public PointF P2;
+        public PointF Pa;
+        public PointF Pb;
+        public EPOST GetGippedPost(Point cursor) {
+            if (Geo.HasGrippedPost(Pa, cursor)) {
+                return EPOST.A;
+            }
+            if (Geo.HasGrippedPost(Pb, cursor)) {
+                return EPOST.B;
+            }
+            return EPOST.NONE;
+        }
         public void Write(StreamWriter sw) {
             sw.WriteLine("LINE {0} {1} {2} {3}",
-                P1.X.ToString("g3"), P1.Y.ToString("g3"),
-                P2.X.ToString("g3"), P2.Y.ToString("g3")
+                Pa.X.ToString("g3"), Pa.Y.ToString("g3"),
+                Pb.X.ToString("g3"), Pb.Y.ToString("g3")
             );
         }
         public void Load(string[] cols) {
-            P1.X = float.Parse(cols[1]);
-            P1.Y = float.Parse(cols[2]);
-            P2.X = float.Parse(cols[3]);
-            P2.Y = float.Parse(cols[4]);
+            Pa.X = float.Parse(cols[1]);
+            Pa.Y = float.Parse(cols[2]);
+            Pb.X = float.Parse(cols[3]);
+            Pb.Y = float.Parse(cols[4]);
         }
         public void Draw(Graphics g, bool highlight = false) {
             if (highlight) {
-                g.DrawLine(Geo.PSelect, P1, P2);
-                Geo.DrawKnob(g, P1);
-                Geo.DrawKnob(g, P2);
+                g.DrawLine(Geo.PSelect, Pa, Pb);
+                Geo.DrawPost(g, Pa);
+                Geo.DrawPost(g, Pb);
             } else {
-                g.DrawLine(Geo.PLine, P1, P2);
+                g.DrawLine(Geo.PLine, Pa, Pb);
             }
         }
     }
 
     struct Arc : IGeo {
-        public PointF Center;
+        public PointF Po;
         public double Radius;
         public double Begin;
         public double Sweep;
+        public EPOST GetGippedPost(Point cursor) {
+            var th = Math.PI * Begin / 180;
+            var p = new PointF(
+                (float)(Po.X + Radius * Math.Cos(th)),
+                (float)(Po.Y + Radius * Math.Sin(th))
+            );
+            if (Geo.HasGrippedPost(p, cursor)) {
+                return EPOST.A;
+            }
+            th += Math.PI * Sweep / 180;
+            p.X = (float)(Po.X + Radius * Math.Cos(th));
+            p.Y = (float)(Po.Y + Radius * Math.Sin(th));
+            if (Geo.HasGrippedPost(p, cursor)) {
+                return EPOST.B;
+            }
+            return EPOST.NONE;
+        }
         public void Write(StreamWriter sw) {
             sw.WriteLine("ARC {0} {1} {2} {3} {4}",
-                Center.X.ToString("g3"), Center.Y.ToString("g3"),
+                Po.X.ToString("g3"), Po.Y.ToString("g3"),
                 Radius.ToString("g3"),
                 Begin.ToString("g3"), Sweep.ToString("g3")
             );
         }
         public void Load(string[] cols) {
-            Center.X = float.Parse(cols[1]);
-            Center.Y = float.Parse(cols[2]);
+            Po.X = float.Parse(cols[1]);
+            Po.Y = float.Parse(cols[2]);
             Radius = float.Parse(cols[3]);
             Begin = float.Parse(cols[4]);
             Sweep = float.Parse(cols[5]);
         }
         public void Draw(Graphics g, bool highlight = false) {
             if (highlight) {
-                Geo.DrawArc(g, Geo.PSelect, Center, Radius, (float)Sweep, (float)Begin);
+                Geo.DrawArc(g, Geo.PSelect, Po, Radius, (float)Sweep, (float)Begin);
+                var th = Math.PI * Begin / 180;
+                var p = new PointF(
+                    (float)(Po.X + Radius * Math.Cos(th)),
+                    (float)(Po.Y + Radius * Math.Sin(th))
+                );
+                Geo.DrawPost(g, p);
+                th += Math.PI * Sweep / 180;
+                p.X = (float)(Po.X + Radius * Math.Cos(th));
+                p.Y = (float)(Po.Y + Radius * Math.Sin(th));
+                Geo.DrawPost(g, p);
             } else {
-                Geo.DrawArc(g, Geo.PLine, Center, Radius, (float)Sweep, (float)Begin);
+                Geo.DrawArc(g, Geo.PLine, Po, Radius, (float)Sweep, (float)Begin);
             }
         }
     }
 
     struct Bow : IGeo {
-        public PointF P1;
-        public PointF P2;
+        public PointF Pa;
+        public PointF Pb;
         public double Radius {
             get { return mArc.Radius; }
             set { mArc.Radius = value; }
@@ -92,48 +140,59 @@ namespace VectorDraw {
 
         Arc mArc;
 
+        public EPOST GetGippedPost(Point cursor) {
+            if (Geo.HasGrippedPost(Pa, cursor)) {
+                return EPOST.A;
+            }
+            if (Geo.HasGrippedPost(Pb, cursor)) {
+                return EPOST.B;
+            }
+            return EPOST.NONE;
+        }
         public void Write(StreamWriter sw) {
             sw.WriteLine("BOW {0} {1} {2} {3} {4}",
-                P1.X.ToString("g3"), P1.Y.ToString("g3"),
-                P2.X.ToString("g3"), P2.Y.ToString("g3"),
+                Pa.X.ToString("g3"), Pa.Y.ToString("g3"),
+                Pb.X.ToString("g3"), Pb.Y.ToString("g3"),
                 Radius.ToString("g3")
             );
         }
         public void Load(string[] cols) {
-            P1.X = float.Parse(cols[1]);
-            P1.Y = float.Parse(cols[2]);
-            P2.X = float.Parse(cols[3]);
-            P2.Y = float.Parse(cols[4]);
+            Pa.X = float.Parse(cols[1]);
+            Pa.Y = float.Parse(cols[2]);
+            Pb.X = float.Parse(cols[3]);
+            Pb.Y = float.Parse(cols[4]);
             Radius = float.Parse(cols[5]);
         }
         public void Draw(Graphics g, bool highlight = false) {
             if (highlight) {
-                Geo.DrawArc(g, Geo.PSelect, mArc.Center, Math.Abs(mArc.Radius),
+                Geo.DrawArc(g, Geo.PSelect, mArc.Po, Math.Abs(mArc.Radius),
                     (float)mArc.Sweep, (float)mArc.Begin);
+                Geo.DrawPost(g, Pa);
+                Geo.DrawPost(g, Pb);
             } else {
-                Geo.DrawArc(g, Geo.PLine, mArc.Center, Math.Abs(mArc.Radius),
+                Geo.DrawArc(g, Geo.PLine, mArc.Po, Math.Abs(mArc.Radius),
                     (float)mArc.Sweep, (float)mArc.Begin);
             }
         }
         public PointF Calc(double distance = 0) {
-            var abx = P2.X - P1.X;
-            var aby = P2.Y - P1.Y;
+            var abx = Pb.X - Pa.X;
+            var aby = Pb.Y - Pa.Y;
             var ab_len = Math.Sqrt(abx * abx + aby * aby);
             var ab_arg = Math.Atan2(aby, abx);
             var bao_arg = Math.Acos(ab_len / mArc.Radius * 0.5);
-            var ox = P1.X + mArc.Radius * Math.Cos(bao_arg + ab_arg);
-            var oy = P1.Y + mArc.Radius * Math.Sin(bao_arg + ab_arg);
-            var oax = P1.X - ox;
-            var oay = P1.Y - oy;
-            var obx = P2.X - ox;
-            var oby = P2.Y - oy;
+            var ox = Pa.X + mArc.Radius * Math.Cos(bao_arg + ab_arg);
+            var oy = Pa.Y + mArc.Radius * Math.Sin(bao_arg + ab_arg);
+            var oax = Pa.X - ox;
+            var oay = Pa.Y - oy;
+            var obx = Pb.X - ox;
+            var oby = Pb.Y - oy;
             var oa_deg = Math.Atan2(oay, oax) * 180 / Math.PI;
             var ob_deg = Math.Atan2(oby, obx) * 180 / Math.PI;
             mArc.Begin = oa_deg;
             mArc.Sweep = ob_deg - oa_deg;
-            mArc.Center.X = (float)ox;
-            mArc.Center.Y = (float)oy;
-            return mArc.Center;
+            mArc.Po.X = (float)ox;
+            mArc.Po.Y = (float)oy;
+            return mArc.Po;
         }
     }
 
@@ -150,6 +209,18 @@ namespace VectorDraw {
         Line mL2;
         Arc mArc;
 
+        public EPOST GetGippedPost(Point cursor) {
+            if (Geo.HasGrippedPost(Pa, cursor)) {
+                return EPOST.A;
+            }
+            if (Geo.HasGrippedPost(Po, cursor)) {
+                return EPOST.O;
+            }
+            if (Geo.HasGrippedPost(Pb, cursor)) {
+                return EPOST.B;
+            }
+            return EPOST.NONE;
+        }
         public void Write(StreamWriter sw) {
             sw.WriteLine("CORNER {0} {1} {2} {3} {4} {5} {6}",
                 Pa.X.ToString("g3"), Pa.Y.ToString("g3"),
@@ -170,21 +241,21 @@ namespace VectorDraw {
         }
         public void Draw(Graphics g, bool highlight = false) {
             if (highlight) {
-                g.DrawLine(Geo.PGray, mL1.P2, Po);
-                g.DrawLine(Geo.PGray, Po, mL2.P1);
-                Geo.DrawArc(g, Geo.PGray, mArc.Center, mArc.Radius);
-                g.DrawLine(Geo.PSelect, mL1.P1, mL1.P2);
-                g.DrawLine(Geo.PSelect, mL2.P1, mL2.P2);
-                Geo.DrawArc(g, Geo.PSelect, mArc.Center,
+                g.DrawLine(Geo.PGray, mL1.Pb, Po);
+                g.DrawLine(Geo.PGray, Po, mL2.Pa);
+                Geo.DrawArc(g, Geo.PGray, mArc.Po, mArc.Radius);
+                g.DrawLine(Geo.PSelect, mL1.Pa, mL1.Pb);
+                g.DrawLine(Geo.PSelect, mL2.Pa, mL2.Pb);
+                Geo.DrawArc(g, Geo.PSelect, mArc.Po,
                     mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
-                Geo.DrawKnob(g, mArc.Center);
-                Geo.DrawKnob(g, Po);
-                Geo.DrawKnob(g, Pa);
-                Geo.DrawKnob(g, Pb);
+                Geo.DrawPost(g, mArc.Po);
+                Geo.DrawPost(g, Po);
+                Geo.DrawPost(g, Pa);
+                Geo.DrawPost(g, Pb);
             } else {
-                g.DrawLine(Geo.PLine, mL1.P1, mL1.P2);
-                g.DrawLine(Geo.PLine, mL2.P1, mL2.P2);
-                Geo.DrawArc(g, Geo.PLine, mArc.Center,
+                g.DrawLine(Geo.PLine, mL1.Pa, mL1.Pb);
+                g.DrawLine(Geo.PLine, mL2.Pa, mL2.Pb);
+                Geo.DrawArc(g, Geo.PLine, mArc.Po,
                     mArc.Radius, (float)mArc.Sweep, (float)mArc.Begin);
             }
         }
@@ -229,12 +300,12 @@ namespace VectorDraw {
             double obpx = u * obx;
             double obpy = u * oby;
 
-            mL1.P1 = Pa;
-            mL1.P2.X = (float)(Po.X + oapx);
-            mL1.P2.Y = (float)(Po.Y + oapy);
-            mL2.P1.X = (float)(Po.X + obpx);
-            mL2.P1.Y = (float)(Po.Y + obpy);
-            mL2.P2 = Pb;
+            mL1.Pa = Pa;
+            mL1.Pb.X = (float)(Po.X + oapx);
+            mL1.Pb.Y = (float)(Po.Y + oapy);
+            mL2.Pa.X = (float)(Po.X + obpx);
+            mL2.Pa.Y = (float)(Po.Y + obpy);
+            mL2.Pb = Pb;
 
             var qx = oapx - px;
             var qy = oapy - py;
@@ -258,10 +329,9 @@ namespace VectorDraw {
             }
 
             mArc.Radius = Math.Sqrt(qx * qx + qy * qy);
-            mArc.Center.X = Po.X + (float)px;
-            mArc.Center.Y = Po.Y + (float)py;
-            return mArc.Center;
+            mArc.Po.X = Po.X + (float)px;
+            mArc.Po.Y = Po.Y + (float)py;
+            return mArc.Po;
         }
     }
-
 }
