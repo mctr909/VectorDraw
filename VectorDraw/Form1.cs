@@ -211,23 +211,53 @@ namespace VectorDraw {
             }
             mG.Clear(Color.Black);
 
-            var c = new Bow();
-            c.Pa.X = 300;
+            //var c = new Bow();
+            //c.Pa.X = 300;
+            //c.Pa.Y = 400;
+
+            //c.Radius = 120;
+            //var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
+            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
+            //c.Calc();
+            //c.Draw(mG, c.IsSelected(mCursor));
+
+            //c.Radius = -120;
+            //th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
+            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
+            //c.Calc();
+            //c.Draw(mG, c.IsSelected(mCursor));
+
+            var c = new Corner();
+            c.Po.X = 200;
+            c.Po.Y = 200;
+            c.Pa.X = 400;
             c.Pa.Y = 400;
 
-            c.Radius = 120;
+            c.Radius = 50;
             var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
+            c.Pb.X = c.Po.X + 300 * (float)Math.Cos(th);
+            c.Pb.Y = c.Po.Y + 300 * (float)Math.Sin(th);
             c.Calc();
-            c.Draw(mG, c.GetGippedPost(mCursor) != EPOST.NONE);
+            c.Draw(mG, c.IsSelected(mCursor));
 
-            c.Radius = -120;
-            th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            c.Calc();
-            c.Draw(mG, c.GetGippedPost(mCursor) != EPOST.NONE);
+            //var c = new Arc();
+            //c.Po.X = 300;
+            //c.Po.Y = 400;
+            //c.Radius = 120;
+            //c.Sweep = 45;
+
+            //c.Begin = 360 * cnt / DELTA + 45;
+            //c.Draw(mG, c.IsSelected(mCursor));
+            //var opx = mCursor.X - c.Po.X;
+            //var opy = mCursor.Y - c.Po.Y;
+            //var opr = Math.Sqrt(opx * opx + opy * opy);
+            //var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI;
+            //tslPos.Text = string.Format("R:{0}, θ:{1}", opr.ToString("g3"), op_arg.ToString("g3"));
+
+            //c.Begin = 360 * cnt / DELTA + 180;
+            //c.Draw(mG, c.IsSelected(mCursor));
 
             cnt = (++cnt % DELTA);
             pictureBox1.Image = pictureBox1.Image;

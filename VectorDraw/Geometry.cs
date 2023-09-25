@@ -22,6 +22,26 @@ namespace VectorDraw {
                 0, 360
             );
         }
+        public static bool HasOnLinePost(PointF a, PointF b, PointF p) {
+            var abx = b.X - a.X;
+            var aby = b.Y - a.Y;
+            var abl2 = abx * abx + aby * aby;
+            if (0 == abl2) {
+                return false;
+            }
+            var apx = p.X - a.X;
+            var apy = p.Y - a.Y;
+            var t = (abx * apx + aby * apy) / abl2;
+            if (t < 0) {
+                t = 0;
+            }
+            if (1 < t) {
+                t = 1;
+            }
+            var pqx = (a.X + abx * t) - p.X;
+            var pqy = (a.Y + aby * t) - p.Y;
+            return Math.Sqrt(pqx * pqx + pqy * pqy) <= POST_RADIUS;
+        }
         public static void DrawArc(Graphics g, Pen color, PointF pos, double radius, double sweep = 360, double begin = 0) {
             g.DrawArc(color,
                 pos.X - (float)radius, pos.Y - (float)radius,
@@ -34,7 +54,8 @@ namespace VectorDraw {
     public enum EPOST { NONE, A, B, O }
 
     interface IGeo {
-        EPOST GetGippedPost(Point p);
+        EPOST GetGippedPost(Point cursor);
+        bool IsSelected(Point cursor);
         void Write(StreamWriter sw);
         void Load(string[] cols);
         void Draw(Graphics g, bool highlight = false);
@@ -51,6 +72,9 @@ namespace VectorDraw {
                 return EPOST.B;
             }
             return EPOST.NONE;
+        }
+        public bool IsSelected(Point cursor) {
+            return Geo.HasOnLinePost(Pa, Pb, cursor);
         }
         public void Write(StreamWriter sw) {
             sw.WriteLine("LINE {0} {1} {2} {3}",
@@ -96,6 +120,24 @@ namespace VectorDraw {
                 return EPOST.B;
             }
             return EPOST.NONE;
+        }
+        public bool IsSelected(Point cursor) {
+            var opx = cursor.X - Po.X;
+            var opy = cursor.Y - Po.Y;
+            var opr = Math.Sqrt(opx * opx + opy * opy);
+            if (Geo.POST_RADIUS < Math.Abs(opr - Radius)) {
+                return false;
+            }
+            var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI - Begin;
+            if (op_arg < 0) {
+                op_arg += 360;
+            } else {
+                op_arg -= 360 * ((int)op_arg / 360);
+            }
+            if (op_arg < 0 || Sweep < op_arg) {
+                return false;
+            }
+            return true;
         }
         public void Write(StreamWriter sw) {
             sw.WriteLine("ARC {0} {1} {2} {3} {4}",
@@ -148,6 +190,9 @@ namespace VectorDraw {
                 return EPOST.B;
             }
             return EPOST.NONE;
+        }
+        public bool IsSelected(Point cursor) {
+            return false;
         }
         public void Write(StreamWriter sw) {
             sw.WriteLine("BOW {0} {1} {2} {3} {4}",
@@ -221,6 +266,30 @@ namespace VectorDraw {
             }
             return EPOST.NONE;
         }
+        public bool IsSelected(Point cursor) {
+            if (Geo.HasOnLinePost(mL1.Pa, mL1.Pb, cursor)) {
+                return true;
+            }
+            if (Geo.HasOnLinePost(mL2.Pa, mL2.Pb, cursor)) {
+                return true;
+            }
+            var opx = cursor.X - mArc.Po.X;
+            var opy = cursor.Y - mArc.Po.Y;
+            var opr = Math.Sqrt(opx * opx + opy * opy);
+            if (Geo.POST_RADIUS < Math.Abs(opr - Radius)) {
+                return false;
+            }
+            var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI - mArc.Begin;
+            if (op_arg < 0) {
+                op_arg += 360;
+            } else {
+                op_arg -= 360 * ((int)op_arg / 360);
+            }
+            if (op_arg < 0 || mArc.Sweep < op_arg) {
+                return false;
+            }
+            return true;
+        }
         public void Write(StreamWriter sw) {
             sw.WriteLine("CORNER {0} {1} {2} {3} {4} {5} {6}",
                 Pa.X.ToString("g3"), Pa.Y.ToString("g3"),
@@ -273,7 +342,7 @@ namespace VectorDraw {
             if (distance == 0) {
                 px /= p_len;
                 py /= p_len;
-                var d = Radius / Math.Sin(Math.Abs(Math.Atan2(py, px) - Math.Atan2(oay, oax)));
+                var d = Math.Min(1000, Radius / Math.Sin(Math.Abs(Math.Atan2(py, px) - Math.Atan2(oay, oax))));
                 px *= d;
                 py *= d;
             } else {
