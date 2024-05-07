@@ -3,314 +3,280 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
+using Geometry;
+
 namespace VectorDraw {
-    public partial class Form1 : Form {
-        enum MOUSE_MODE {
-            SELECT,
-            GRIP_POST,
-            GRIP_ITEMS,
-            ARC_POS,
-            ARC_RADIUS,
-            ARC_BEGIN,
-            ARC_END,
-            BOW_BEGIN,
-            BOW_END,
-            BOW_RADIUS,
-            POLYLINE
-        }
+	public partial class Form1 : Form {
+		enum MOUSE_MODE {
+			SELECT,
+			GRIP_POST,
+			GRIP_ITEMS,
+			BEGIN,
+			POS,
+			RADIUS
+		}
 
-        Bitmap mBmp;
-        Graphics mG;
-        bool mSizeChange = false;
-        Point mScroll = new Point();
-        Point mCursor = new Point();
-        MOUSE_MODE mMode = MOUSE_MODE.SELECT;
+		Bitmap Bmp;
+		Drawer G;
+		bool SizeChange = false;
+		Point Scroll = new Point();
+		Point Cursor = new Point();
+		MOUSE_MODE Mode = MOUSE_MODE.SELECT;
 
-        public Form1() {
-            InitializeComponent();
-        }
+		public Form1() {
+			InitializeComponent();
+		}
 
-        private void Form1_Load(object sender, EventArgs e) {
-            sizeChange();
-            KeyPreview = true;
-            timer1.Enabled = true;
-            timer1.Interval = 16;
-            timer1.Start();
-        }
+		#region Form events
+		private void Form1_Load(object sender, EventArgs e) {
+			sizeChange();
+			KeyPreview = true;
+			timer1.Enabled = true;
+			timer1.Interval = 16;
+			timer1.Start();
+		}
 
-        private void Form1_SizeChanged(object sender, EventArgs e) {
-            mSizeChange = true;
-        }
+		private void Form1_SizeChanged(object sender, EventArgs e) {
+			SizeChange = true;
+		}
 
-        private void Form1_KeyUp(object sender, KeyEventArgs e) {
-            switch(e.KeyCode) {
-            case Keys.Escape:
-                tsmEditEsc_Click(null, null);
-                break;
-            }
-        }
+		private void Form1_KeyUp(object sender, KeyEventArgs e) {
+			switch (e.KeyCode) {
+			case Keys.Escape:
+				break;
+			}
+		}
 
-        private void hScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
-            mScroll.X = hScrollBar1.Value;
-        }
+		private void HSB_Scroll(object sender = null, ScrollEventArgs e = null) {
+			Scroll.X = HSB.Value;
+		}
 
-        private void vScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
-            mScroll.Y = vScrollBar1.Value;
-        }
+		private void VSB_Scroll(object sender = null, ScrollEventArgs e = null) {
+			Scroll.Y = VSB.Value;
+		}
+		#endregion
 
-        #region Menu[File] events
-        private void tsmFileNew_Click(object sender, EventArgs e) {
-        }
+		#region PictureBox events
+		private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
+		}
 
-        private void tsmFileOpen_Click(object sender, EventArgs e) {
-            openFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
-            openFileDialog1.ShowDialog();
-            var path = openFileDialog1.FileName;
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) {
-                return;
-            }
-            Text = path;
-            load(path);
-        }
+		private void pictureBox1_MouseUp(object sender, MouseEventArgs e) {
+		}
 
-        private void tsmFileOverwrite_Click(object sender, EventArgs e) {
-            if (string.IsNullOrWhiteSpace(Text) || !Directory.Exists(Path.GetDirectoryName(Text))) {
-                return;
-            }
-            save(Text);
-        }
+		private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
+			Cursor = pictureBox1.PointToClient(System.Windows.Forms.Cursor.Position);
+			//tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
+		}
+		#endregion
 
-        private void tsmFileSave_Click(object sender, EventArgs e) {
-            saveFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
-            saveFileDialog1.ShowDialog();
-            var path = saveFileDialog1.FileName;
-            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(Path.GetDirectoryName(path))) {
-                return;
-            }
-            Text = path;
-            save(path);
-        }
+		#region Menu[File] events
+		private void FileNew_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmFileSavePDF_Click(object sender, EventArgs e) {
-        }
-        #endregion
+		private void FileOpen_Click(object sender, EventArgs e) {
+			openFileDialog1.Filter = "SVGファイル(*.svg)|*.svg";
+			openFileDialog1.ShowDialog();
+			var path = openFileDialog1.FileName;
+			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) {
+				return;
+			}
+			Text = path;
+			load(path);
+		}
 
-        #region Menu[Edit] events
-        private void tsmEditUndo_Click(object sender, EventArgs e) {
-        }
+		private void FileOverwrite_Click(object sender, EventArgs e) {
+			if (string.IsNullOrWhiteSpace(Text) || !Directory.Exists(Path.GetDirectoryName(Text))) {
+				return;
+			}
+			save(Text);
+		}
 
-        private void tsmEditRedo_Click(object sender, EventArgs e) {
-        }
+		private void FileSave_Click(object sender, EventArgs e) {
+			saveFileDialog1.Filter = "SVGファイル(*.svg)|*.svg";
+			saveFileDialog1.ShowDialog();
+			var path = saveFileDialog1.FileName;
+			if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(Path.GetDirectoryName(path))) {
+				return;
+			}
+			Text = path;
+			save(path);
+		}
+		#endregion
 
-        private void tsmEditEsc_Click(object sender, EventArgs e) {
-        }
+		#region Menu[Edit] events
+		private void EditUndo_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmEditCut_Click(object sender, EventArgs e) {
-        }
+		private void EditRedo_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmEditCopy_Click(object sender, EventArgs e) {
-        }
+		private void EditCut_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmEditPaste_Click(object sender, EventArgs e) {
-        }
+		private void EditCopy_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmEditDelete_Click(object sender, EventArgs e) {
-        }
-        #endregion
+		private void EditPaste_Click(object sender, EventArgs e) {
+		}
 
-        #region Menu[Display] events
-        private void tsmDispMoveToLocalOrigin_Click(object sender, EventArgs e) {
-        }
+		private void EditDelete_Click(object sender, EventArgs e) {
+		}
+		#endregion
 
-        private void tsmDispMoveToGlobalOrigin_Click(object sender, EventArgs e) {
-            hScrollBar1.Value = 0;
-            vScrollBar1.Value = 0;
-        }
+		#region Menu[Display] events
+		private void Disp100_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDisp100_Click(object sender, EventArgs e) {
-        }
+		private void DispZoomIn_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispZoomIn_Click(object sender, EventArgs e) {
-        }
+		private void DispZoomOut_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispZoomOut_Click(object sender, EventArgs e) {
-        }
+		private void DispMoveToLocalOrigin_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispSetGridPitch_Click(object sender, EventArgs e) {
-        }
+		private void DispMoveToGlobalOrigin_Click(object sender, EventArgs e) {
+			HSB.Value = 0;
+			VSB.Value = 0;
+		}
 
-        private void tsmDispLocalGrid_Click(object sender, EventArgs e) {
-        }
+		private void DispLocalGrid_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispGlobalGrid_Click(object sender, EventArgs e) {
-        }
-        #endregion
+		private void DispGlobalGrid_Click(object sender, EventArgs e) {
+		}
+		#endregion
 
-        private void tsmSnap_Click(object sender, EventArgs e) {
-            var item = (ToolStripMenuItem)sender;
-            item.Checked = !item.Checked;
-        }
+		private void Mode_Click(object sender, EventArgs e) {
+			ModeSelect.Checked = false;
+			ModeMoveLocalOrigin.Checked = false;
+			ModePolyline.Checked = false;
+			ModePolygonFill.Checked = false;
+			ModePolygonHole.Checked = false;
 
-        private void tsmMode_Click(object sender, EventArgs e) {
-            tsmModeSelect.Checked = false;
-            tsmModeMoveLocalOrigin.Checked = false;
-            tsmModePolyline.Checked = false;
-            tsmModePolygonFill.Checked = false;
-            tsmModePolygonHole.Checked = false;
+			var item = (ToolStripMenuItem)sender;
+			item.Checked = true;
 
-            var item = (ToolStripMenuItem)sender;
-            item.Checked = true;
+			if (item == ModeSelect) {
+				EnableLineType(false);
+				Mode = MOUSE_MODE.SELECT;
+				return;
+			}
+			if (item == ModeMoveLocalOrigin) {
+				EnableLineType(false);
+				Mode = MOUSE_MODE.SELECT;
+				return;
+			}
+			if (item == ModePolyline) {
+				EnableLineType(true);
+				Mode = MOUSE_MODE.BEGIN;
+				return;
+			}
+			if (item == ModePolygonFill) {
+				EnableLineType(true);
+				Mode = MOUSE_MODE.BEGIN;
+				return;
+			}
+			if (item == ModePolygonHole) {
+				EnableLineType(true);
+				Mode = MOUSE_MODE.BEGIN;
+				return;
+			}
 
-            if (item == tsmModeSelect) {
-                //mMode = MODE.SELECT;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModeMoveLocalOrigin) {
-                //mMode = MODE.MOVE_ORIGIN;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolyline) {
-                //mMode = MODE.POLYLINE;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolygonFill) {
-                //mMode = MODE.POLYGON_FILL;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolygonHole) {
-                //mMode = MODE.POLYGON_HOLE;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-        }
+			void EnableLineType(bool enable) {
+				ModeLine.Enabled = enable;
+				ModeCurve.Enabled = enable;
+				ModeArc.Enabled = enable;
+			}
+		}
 
-        #region PictureBox events
-        private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
-        }
+		private void ModeLineType_Click(object sender, EventArgs e) {
+			ModeLine.Checked = false;
+			ModeCurve.Checked = false;
+			ModeArc.Checked = false;
+			var item = (ToolStripMenuItem)sender;
+			item.Checked = true;
+		}
 
-        private void pictureBox1_MouseUp(object sender, MouseEventArgs e) {
-        }
+		private void Snap_Click(object sender, EventArgs e) {
+			var item = (ToolStripMenuItem)sender;
+			item.Checked = !item.Checked;
+		}
 
-        private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
-            mCursor = pictureBox1.PointToClient(Cursor.Position);
-            //tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
-        }
-        #endregion
+		int cnt = 0;
+		const int DELTA = 480;
 
-        int cnt = 0;
-        const int DELTA = 480;
+		private void timer1_Tick(object sender, EventArgs e) {
+			if (SizeChange) {
+				sizeChange();
+				SizeChange = false;
+			}
+			G.Clear(Color.Black);
 
-        private void timer1_Tick(object sender, EventArgs e) {
-            if (mSizeChange) {
-                sizeChange();
-                mSizeChange = false;
-            }
-            mG.Clear(Color.Black);
+			{
+				var c = new Arc {
+					A = new Vec2 { X = 400, Y = 400 },
+					O = new Vec2 { X = 200, Y = 200 }
+				};
+				var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+				c.B = c.O + Vec2.FromPhaser(300, th);
+				c.Calc();
+				c.Draw(G, c.IsSelected(Cursor));
+			}
 
-            //var c = new Bow();
-            //c.Pa.X = 300;
-            //c.Pa.Y = 400;
+			cnt = (++cnt % DELTA);
+			pictureBox1.Image = pictureBox1.Image;
+		}
 
-            //c.Radius = 120;
-            //var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            //c.Calc();
-            //c.Draw(mG, c.IsSelected(mCursor));
+		void sizeChange() {
+			SizeChange = false;
 
-            //c.Radius = -120;
-            //th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            //c.Calc();
-            //c.Draw(mG, c.IsSelected(mCursor));
+			pictureBox1.Left = 0;
+			pictureBox1.Top = menuStrip1.Bottom;
+			pictureBox1.Width = Width - VSB.Width - 16;
+			pictureBox1.Height = Height - menuStrip1.Bottom - statusStrip1.Height - 56;
 
-            var c = new Corner();
-            c.Po.X = 200;
-            c.Po.Y = 200;
-            c.Pa.X = 400;
-            c.Pa.Y = 400;
+			VSB.Left = pictureBox1.Right;
+			VSB.Top = menuStrip1.Bottom;
+			VSB.Height = pictureBox1.Height;
+			HSB.Left = 0;
+			HSB.Top = pictureBox1.Bottom;
+			HSB.Width = pictureBox1.Width;
 
-            c.Radius = 50;
-            var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            c.Pb.X = c.Po.X + 300 * (float)Math.Cos(th);
-            c.Pb.Y = c.Po.Y + 300 * (float)Math.Sin(th);
-            c.Calc();
-            c.Draw(mG, c.IsSelected(mCursor));
+			if (null != G) {
+				G.Dispose();
+				G = null;
+			}
+			if (null != Bmp) {
+				Bmp.Dispose();
+				Bmp = null;
+			}
+			if (null != pictureBox1.Image) {
+				pictureBox1.Image.Dispose();
+				pictureBox1.Image = null;
+			}
 
-            //var c = new Arc();
-            //c.Po.X = 300;
-            //c.Po.Y = 400;
-            //c.Radius = 120;
-            //c.Sweep = 45;
+			Bmp = new Bitmap(Math.Max(MinimumSize.Width, pictureBox1.Width), Math.Max(MinimumSize.Height, pictureBox1.Height));
+			G = new Drawer(Bmp);
+			pictureBox1.Image = Bmp;
+			HSB_Scroll();
+			VSB_Scroll();
+		}
 
-            //c.Begin = 360 * cnt / DELTA + 45;
-            //c.Draw(mG, c.IsSelected(mCursor));
-            //var opx = mCursor.X - c.Po.X;
-            //var opy = mCursor.Y - c.Po.Y;
-            //var opr = Math.Sqrt(opx * opx + opy * opy);
-            //var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI;
-            //tslPos.Text = string.Format("R:{0}, θ:{1}", opr.ToString("g3"), op_arg.ToString("g3"));
+		void save(string path) {
+			var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
+			var sw = new StreamWriter(fs);
+			sw.Flush();
+			sw.Close();
+			sw.Dispose();
+		}
 
-            //c.Begin = 360 * cnt / DELTA + 180;
-            //c.Draw(mG, c.IsSelected(mCursor));
-
-            cnt = (++cnt % DELTA);
-            pictureBox1.Image = pictureBox1.Image;
-        }
-
-        void sizeChange() {
-            mSizeChange = false;
-
-            pictureBox1.Left = 0;
-            pictureBox1.Top = menuStrip1.Bottom;
-            pictureBox1.Width = Width - vScrollBar1.Width - 16;
-            pictureBox1.Height = Height - menuStrip1.Bottom - statusStrip1.Height - 56;
-
-            vScrollBar1.Left = pictureBox1.Right;
-            vScrollBar1.Top = menuStrip1.Bottom;
-            vScrollBar1.Height = pictureBox1.Height;
-            hScrollBar1.Left = 0;
-            hScrollBar1.Top = pictureBox1.Bottom;
-            hScrollBar1.Width = pictureBox1.Width;
-
-            if (null != mG) {
-                mG.Dispose();
-                mG = null;
-            }
-            if (null != mBmp) {
-                mBmp.Dispose();
-                mBmp = null;
-            }
-            if (null != pictureBox1.Image) {
-                pictureBox1.Image.Dispose();
-                pictureBox1.Image = null;
-            }
-
-            mBmp = new Bitmap(Math.Max(MinimumSize.Width, pictureBox1.Width), Math.Max(MinimumSize.Height, pictureBox1.Height));
-            mG = Graphics.FromImage(mBmp);
-            pictureBox1.Image = mBmp;
-            hScrollBar1_Scroll();
-            vScrollBar1_Scroll();
-        }
-
-        void save(string path) {
-            var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
-            var sw = new StreamWriter(fs);
-            sw.Flush();
-            sw.Close();
-            sw.Dispose();
-        }
-
-        void load(string path) {
-            var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-            var sr = new StreamReader(fs);
-            sr.Close();
-            sr.Dispose();
-        }
-    }
+		void load(string path) {
+			var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+			var sr = new StreamReader(fs);
+			sr.Close();
+			sr.Dispose();
+		}
+	}
 }
