@@ -46,18 +46,54 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Form1.cs">
+    <Compile Include="Forms\GridSettings.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form1.Designer.cs">
-      <DependentUpon>Form1.cs</DependentUpon>
+    <Compile Include="Forms\GridSettings.Designer.cs">
+      <DependentUpon>GridSettings.cs</DependentUpon>
     </Compile>
-    <Compile Include="Geo.cs" />
-    <Compile Include="Geometry.cs" />
+    <Compile Include="Forms\MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\LayerList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\LayerList.Designer.cs">
+      <DependentUpon>LayerList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\ModelList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\ModelList.Designer.cs">
+      <DependentUpon>ModelList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Geometry\BaseGeometry.cs" />
+    <Compile Include="Geometry\BasePolygon.cs" />
+    <Compile Include="Geometry\Polygon.cs" />
+    <Compile Include="Geometry\vec2.cs" />
+    <Compile Include="Geometry\Post.cs" />
+    <Compile Include="Geometry\Group.cs" />
+    <Compile Include="Geometry\Layer.cs" />
+    <Compile Include="Geometry\Model.cs" />
+    <Compile Include="Geometry\Polyline.cs" />
+    <Compile Include="Geometry\Arc.cs" />
+    <Compile Include="Geometry\Corner.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="Form1.resx">
-      <DependentUpon>Form1.cs</DependentUpon>
+    <EmbeddedResource Include="Forms\GridSettings.resx">
+      <DependentUpon>GridSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\MainForm.resx">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\LayerList.resx">
+      <DependentUpon>LayerList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\ModelList.resx">
+      <DependentUpon>ModelList.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
