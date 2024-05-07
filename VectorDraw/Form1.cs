@@ -3,314 +3,333 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
+using Geometry;
+
 namespace VectorDraw {
-    public partial class Form1 : Form {
-        enum MOUSE_MODE {
-            SELECT,
-            GRIP_POST,
-            GRIP_ITEMS,
-            ARC_POS,
-            ARC_RADIUS,
-            ARC_BEGIN,
-            ARC_END,
-            BOW_BEGIN,
-            BOW_END,
-            BOW_RADIUS,
-            POLYLINE
-        }
+	public partial class Form1 : Form {
+		enum EDIT_STATE {
+			LOCAL_ORIGIN,
 
-        Bitmap mBmp;
-        Graphics mG;
-        bool mSizeChange = false;
-        Point mScroll = new Point();
-        Point mCursor = new Point();
-        MOUSE_MODE mMode = MOUSE_MODE.SELECT;
+			SELECT_BEGIN,
+			SELECT_GRIP,
 
-        public Form1() {
-            InitializeComponent();
-        }
+			CORNER_SELECT,
+			CORNER_RADIUS,
 
-        private void Form1_Load(object sender, EventArgs e) {
-            sizeChange();
-            KeyPreview = true;
-            timer1.Enabled = true;
-            timer1.Interval = 16;
-            timer1.Start();
-        }
+			POLYLINE_BEGIN,
+			POLYLINE_POST,
+			POLYLINE_END,
 
-        private void Form1_SizeChanged(object sender, EventArgs e) {
-            mSizeChange = true;
-        }
+			POLYGON_BEGIN,
+			POLYGON_POST,
+			POLYGON_END,
 
-        private void Form1_KeyUp(object sender, KeyEventArgs e) {
-            switch(e.KeyCode) {
-            case Keys.Escape:
-                tsmEditEsc_Click(null, null);
-                break;
-            }
-        }
+			POLYHOLE_SELECT,
+			POLYHOLE_BEGIN,
+			POLYHOLE_POST,
+			POLYHOLE_END
+		}
 
-        private void hScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
-            mScroll.X = hScrollBar1.Value;
-        }
+		enum POLY_MODE {
+			LINE,
 
-        private void vScrollBar1_Scroll(object sender = null, ScrollEventArgs e = null) {
-            mScroll.Y = vScrollBar1.Value;
-        }
+			ARC_RADIUS,
+			ARC_CENTER,
+			ARC_SWEEP,
 
-        #region Menu[File] events
-        private void tsmFileNew_Click(object sender, EventArgs e) {
-        }
+			BOW_END,
+			BOW_RADIUS
+		}
 
-        private void tsmFileOpen_Click(object sender, EventArgs e) {
-            openFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
-            openFileDialog1.ShowDialog();
-            var path = openFileDialog1.FileName;
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) {
-                return;
-            }
-            Text = path;
-            load(path);
-        }
+		bool mSizeChange = false;
+		EDIT_STATE mEditState = EDIT_STATE.SELECT_BEGIN;
+		POLY_MODE mPolyMode = POLY_MODE.LINE;
 
-        private void tsmFileOverwrite_Click(object sender, EventArgs e) {
-            if (string.IsNullOrWhiteSpace(Text) || !Directory.Exists(Path.GetDirectoryName(Text))) {
-                return;
-            }
-            save(Text);
-        }
+		Bitmap mBmp;
+		Graphics mG;
+		Point mOffset;
+		Point mCursor;
 
-        private void tsmFileSave_Click(object sender, EventArgs e) {
-            saveFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
-            saveFileDialog1.ShowDialog();
-            var path = saveFileDialog1.FileName;
-            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(Path.GetDirectoryName(path))) {
-                return;
-            }
-            Text = path;
-            save(path);
-        }
+		public Form1() {
+			InitializeComponent();
+		}
 
-        private void tsmFileSavePDF_Click(object sender, EventArgs e) {
-        }
-        #endregion
+		private void Form1_Load(object sender, EventArgs e) {
+			SizeChange();
+			KeyPreview = true;
+			MenuItemMode_Select.PerformClick();
+			DisplayTimer.Enabled = true;
+			DisplayTimer.Interval = 16;
+			DisplayTimer.Start();
+		}
 
-        #region Menu[Edit] events
-        private void tsmEditUndo_Click(object sender, EventArgs e) {
-        }
+		private void Form1_SizeChanged(object sender, EventArgs e) {
+			mSizeChange = true;
+		}
 
-        private void tsmEditRedo_Click(object sender, EventArgs e) {
-        }
+		private void Form1_KeyUp(object sender, KeyEventArgs e) {
+			switch (e.KeyCode) {
+			case Keys.Escape:
+				MenuItemEdit_Cancel_Click(null, null);
+				break;
+			}
+		}
 
-        private void tsmEditEsc_Click(object sender, EventArgs e) {
-        }
+		private void ScrollBarX_Scroll(object sender = null, ScrollEventArgs e = null) {
+			mOffset.X = ScrollBarX.Value;
+		}
 
-        private void tsmEditCut_Click(object sender, EventArgs e) {
-        }
+		private void ScrollBarY_Scroll(object sender = null, ScrollEventArgs e = null) {
+			mOffset.Y = ScrollBarY.Value;
+		}
 
-        private void tsmEditCopy_Click(object sender, EventArgs e) {
-        }
+		#region メニューイベント[ファイル]
+		private void MenuItemFile_New_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmEditPaste_Click(object sender, EventArgs e) {
-        }
+		private void MenuItemFile_Open_Click(object sender, EventArgs e) {
+			openFileDialog1.FileName = Path.GetFileNameWithoutExtension(Text);
+			openFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
+			openFileDialog1.ShowDialog();
+			LoadFile(openFileDialog1.FileName);
+		}
 
-        private void tsmEditDelete_Click(object sender, EventArgs e) {
-        }
-        #endregion
+		private void MenuItemFile_Overwrite_Click(object sender, EventArgs e) {
+			SaveFile(Text);
+		}
 
-        #region Menu[Display] events
-        private void tsmDispMoveToLocalOrigin_Click(object sender, EventArgs e) {
-        }
+		private void MenuItemFile_Save_Click(object sender, EventArgs e) {
+			saveFileDialog1.FileName = Path.GetFileNameWithoutExtension(Text);
+			saveFileDialog1.Filter = "テキストファイル(*.txt)|*.txt";
+			saveFileDialog1.ShowDialog();
+			SaveFile(saveFileDialog1.FileName);
+		}
 
-        private void tsmDispMoveToGlobalOrigin_Click(object sender, EventArgs e) {
-            hScrollBar1.Value = 0;
-            vScrollBar1.Value = 0;
-        }
+		private void MenuItemFile_SavePDF_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDisp100_Click(object sender, EventArgs e) {
-        }
+		void SaveFile(string path) {
+			if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(Path.GetDirectoryName(path))) {
+				return;
+			}
+			var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
+			var sw = new StreamWriter(fs);
+			sw.Flush();
+			sw.Close();
+			sw.Dispose();
+			Text = path;
+		}
 
-        private void tsmDispZoomIn_Click(object sender, EventArgs e) {
-        }
+		void LoadFile(string path) {
+			if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) {
+				return;
+			}
+			var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+			var sr = new StreamReader(fs);
+			sr.Close();
+			sr.Dispose();
+			Text = path;
+		}
+		#endregion
 
-        private void tsmDispZoomOut_Click(object sender, EventArgs e) {
-        }
+		#region メニューイベント[編集]
+		private void MenuItemEdit_Cancel_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispSetGridPitch_Click(object sender, EventArgs e) {
-        }
+		private void MenuItemEdit_Undo_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispLocalGrid_Click(object sender, EventArgs e) {
-        }
+		private void MenuItemEdit_Redo_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmDispGlobalGrid_Click(object sender, EventArgs e) {
-        }
-        #endregion
+		private void MenuItemEdit_Delete_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmSnap_Click(object sender, EventArgs e) {
-            var item = (ToolStripMenuItem)sender;
-            item.Checked = !item.Checked;
-        }
+		private void MenuItemEdit_Cut_Click(object sender, EventArgs e) {
+		}
 
-        private void tsmMode_Click(object sender, EventArgs e) {
-            tsmModeSelect.Checked = false;
-            tsmModeMoveLocalOrigin.Checked = false;
-            tsmModePolyline.Checked = false;
-            tsmModePolygonFill.Checked = false;
-            tsmModePolygonHole.Checked = false;
+		private void MenuItemEdit_Copy_Click(object sender, EventArgs e) {
+		}
 
-            var item = (ToolStripMenuItem)sender;
-            item.Checked = true;
+		private void MenuItemEdit_Paste_Click(object sender, EventArgs e) {
+		}
+		#endregion
 
-            if (item == tsmModeSelect) {
-                //mMode = MODE.SELECT;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModeMoveLocalOrigin) {
-                //mMode = MODE.MOVE_ORIGIN;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolyline) {
-                //mMode = MODE.POLYLINE;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolygonFill) {
-                //mMode = MODE.POLYGON_FILL;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolygonHole) {
-                //mMode = MODE.POLYGON_HOLE;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-        }
+		#region メニューイベント[表示]
+		private void MenuItemDisp_MoveToObjectOrigin_Click(object sender, EventArgs e) {
+		}
 
-        #region PictureBox events
-        private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
-        }
+		private void MenuItemDisp_MoveToGlobalOrigin_Click(object sender, EventArgs e) {
+			ScrollBarX.Value = 0;
+			ScrollBarY.Value = 0;
+		}
 
-        private void pictureBox1_MouseUp(object sender, MouseEventArgs e) {
-        }
+		private void MenuItemDisp_100_Click(object sender, EventArgs e) {
+		}
 
-        private void pictureBox1_MouseMove(object sender, MouseEventArgs e) {
-            mCursor = pictureBox1.PointToClient(Cursor.Position);
-            //tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
-        }
-        #endregion
+		private void MenuItemDisp_ZoomIn_Click(object sender, EventArgs e) {
+		}
 
-        int cnt = 0;
-        const int DELTA = 480;
+		private void MenuItemDisp_ZoomOut_Click(object sender, EventArgs e) {
+		}
 
-        private void timer1_Tick(object sender, EventArgs e) {
-            if (mSizeChange) {
-                sizeChange();
-                mSizeChange = false;
-            }
-            mG.Clear(Color.Black);
+		private void MenuItemDisp_SetGridPitch_Click(object sender, EventArgs e) {
+		}
 
-            //var c = new Bow();
-            //c.Pa.X = 300;
-            //c.Pa.Y = 400;
+		private void MenuItemDisp_ObjectGrid_Click(object sender, EventArgs e) {
+		}
 
-            //c.Radius = 120;
-            //var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            //c.Calc();
-            //c.Draw(mG, c.IsSelected(mCursor));
+		private void MenuItemDisp_GlobalGrid_Click(object sender, EventArgs e) {
+		}
+		#endregion
 
-            //c.Radius = -120;
-            //th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            //c.Calc();
-            //c.Draw(mG, c.IsSelected(mCursor));
+		#region メニューイベント[モード]
+		private void MenuItemMode_Select_Click(object sender, EventArgs e) {
+			MenuItemMode_Polyline.Checked = false;
+			MenuItemMode_PolygonFill.Checked = false;
+			MenuItemMode_PolygonHole.Checked = false;
 
-            var c = new Corner();
-            c.Po.X = 200;
-            c.Po.Y = 200;
-            c.Pa.X = 400;
-            c.Pa.Y = 400;
+			MenuItemPolyMode_Line.Checked = false;
+			MenuItemPolyMode_Line.Enabled = true;
+			MenuItemPolyMode_Arc.Checked = false;
+			MenuItemPolyMode_Arc.Enabled = true;
+			MenuItemPolyMode_Bow.Checked = false;
+			MenuItemPolyMode_Bow.Enabled = true;
 
-            c.Radius = 50;
-            var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            c.Pb.X = c.Po.X + 300 * (float)Math.Cos(th);
-            c.Pb.Y = c.Po.Y + 300 * (float)Math.Sin(th);
-            c.Calc();
-            c.Draw(mG, c.IsSelected(mCursor));
+			MenuItemMode_Select.Checked = false;
+			MenuItemMode_Corner.Checked = false;
+			MenuItemMode_MoveObjectOrigin.Checked = false;
 
-            //var c = new Arc();
-            //c.Po.X = 300;
-            //c.Po.Y = 400;
-            //c.Radius = 120;
-            //c.Sweep = 45;
+			var item = (ToolStripMenuItem)sender;
+			item.Checked = true;
 
-            //c.Begin = 360 * cnt / DELTA + 45;
-            //c.Draw(mG, c.IsSelected(mCursor));
-            //var opx = mCursor.X - c.Po.X;
-            //var opy = mCursor.Y - c.Po.Y;
-            //var opr = Math.Sqrt(opx * opx + opy * opy);
-            //var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI;
-            //tslPos.Text = string.Format("R:{0}, θ:{1}", opr.ToString("g3"), op_arg.ToString("g3"));
+			if (item == MenuItemMode_Polyline) {
+				mEditState = EDIT_STATE.POLYLINE_BEGIN;
+				mPolyMode = POLY_MODE.LINE;
+				MenuItemPolyMode_Line.Checked = true;
+				return;
+			}
+			if (item == MenuItemMode_PolygonFill) {
+				mEditState = EDIT_STATE.POLYGON_BEGIN;
+				mPolyMode = POLY_MODE.LINE;
+				MenuItemPolyMode_Line.Checked = true;
+				return;
+			}
+			if (item == MenuItemMode_PolygonHole) {
+				mEditState = EDIT_STATE.POLYHOLE_SELECT;
+				mPolyMode = POLY_MODE.LINE;
+				MenuItemPolyMode_Line.Checked = true;
+				return;
+			}
 
-            //c.Begin = 360 * cnt / DELTA + 180;
-            //c.Draw(mG, c.IsSelected(mCursor));
+			MenuItemPolyMode_Line.Enabled = false;
+			MenuItemPolyMode_Arc.Enabled = false;
+			MenuItemPolyMode_Bow.Enabled = false;
 
-            cnt = (++cnt % DELTA);
-            pictureBox1.Image = pictureBox1.Image;
-        }
+			if (item == MenuItemMode_Select) {
+				mEditState = EDIT_STATE.SELECT_BEGIN;
+				return;
+			}
+			if (item == MenuItemMode_Corner) {
+				mEditState = EDIT_STATE.CORNER_SELECT;
+				return;
+			}
+			if (item == MenuItemMode_MoveObjectOrigin) {
+				mEditState = EDIT_STATE.LOCAL_ORIGIN;
+				return;
+			}
+		}
 
-        void sizeChange() {
-            mSizeChange = false;
+		private void MenuItemPolyMode_Click(object sender, EventArgs e) {
+			MenuItemPolyMode_Line.Checked = false;
+			MenuItemPolyMode_Arc.Checked = false;
+			MenuItemPolyMode_Bow.Checked = false;
 
-            pictureBox1.Left = 0;
-            pictureBox1.Top = menuStrip1.Bottom;
-            pictureBox1.Width = Width - vScrollBar1.Width - 16;
-            pictureBox1.Height = Height - menuStrip1.Bottom - statusStrip1.Height - 56;
+			if (!(MenuItemMode_Polyline.Checked | MenuItemMode_PolygonFill.Checked | MenuItemMode_PolygonHole.Checked)) {
+				return;
+			}
 
-            vScrollBar1.Left = pictureBox1.Right;
-            vScrollBar1.Top = menuStrip1.Bottom;
-            vScrollBar1.Height = pictureBox1.Height;
-            hScrollBar1.Left = 0;
-            hScrollBar1.Top = pictureBox1.Bottom;
-            hScrollBar1.Width = pictureBox1.Width;
+			var item = (ToolStripMenuItem)sender;
+			item.Checked = true;
 
-            if (null != mG) {
-                mG.Dispose();
-                mG = null;
-            }
-            if (null != mBmp) {
-                mBmp.Dispose();
-                mBmp = null;
-            }
-            if (null != pictureBox1.Image) {
-                pictureBox1.Image.Dispose();
-                pictureBox1.Image = null;
-            }
+			if (item == MenuItemPolyMode_Line) {
+				mPolyMode = POLY_MODE.LINE;
+				return;
+			}
+			if (item == MenuItemPolyMode_Arc) {
+				mPolyMode = POLY_MODE.ARC_RADIUS;
+				return;
+			}
+			if (item == MenuItemPolyMode_Bow) {
+				mPolyMode = POLY_MODE.BOW_END;
+				return;
+			}
+		}
+		#endregion
 
-            mBmp = new Bitmap(Math.Max(MinimumSize.Width, pictureBox1.Width), Math.Max(MinimumSize.Height, pictureBox1.Height));
-            mG = Graphics.FromImage(mBmp);
-            pictureBox1.Image = mBmp;
-            hScrollBar1_Scroll();
-            vScrollBar1_Scroll();
-        }
+		#region メニューイベント[スナップ]
+		private void MenuItemSnap_Click(object sender, EventArgs e) {
+			var item = (ToolStripMenuItem)sender;
+			item.Checked = !item.Checked;
+		}
+		#endregion
 
-        void save(string path) {
-            var fs = new FileStream(path, FileMode.Create, FileAccess.Write);
-            var sw = new StreamWriter(fs);
-            sw.Flush();
-            sw.Close();
-            sw.Dispose();
-        }
+		#region 描画エリアイベント
+		private void DisplayArea_MouseDown(object sender, MouseEventArgs e) {
+		}
 
-        void load(string path) {
-            var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-            var sr = new StreamReader(fs);
-            sr.Close();
-            sr.Dispose();
-        }
-    }
+		private void DisplayArea_MouseUp(object sender, MouseEventArgs e) {
+		}
+
+		private void DisplayArea_MouseMove(object sender, MouseEventArgs e) {
+			mCursor = DisplayArea.PointToClient(Cursor.Position);
+			//tslPos.Text = string.Format("{0}mm, {1}mm", mCursor.X.ToString("0.##"), mCursor.Y.ToString("0.##"));
+		}
+		#endregion
+
+		#region 描画更新
+		private void DisplayTimer_Tick(object sender, EventArgs e) {
+			if (mSizeChange) {
+				SizeChange();
+				mSizeChange = false;
+			}
+			mG.Clear(Color.Black);
+
+			DisplayArea.Image = DisplayArea.Image;
+		}
+
+		void SizeChange() {
+			DisplayArea.Left = 0;
+			DisplayArea.Top = menuStrip1.Bottom;
+			DisplayArea.Width = Width - ScrollBarY.Width - 16;
+			DisplayArea.Height = Height - ScrollBarX.Height - menuStrip1.Bottom - 39;
+
+			ScrollBarY.Left = DisplayArea.Right;
+			ScrollBarY.Top = menuStrip1.Bottom;
+			ScrollBarY.Height = DisplayArea.Height;
+			ScrollBarX.Left = 0;
+			ScrollBarX.Top = DisplayArea.Bottom;
+			ScrollBarX.Width = DisplayArea.Width;
+
+			if (null != mG) {
+				mG.Dispose();
+				mG = null;
+			}
+			if (null != mBmp) {
+				mBmp.Dispose();
+				mBmp = null;
+			}
+			if (null != DisplayArea.Image) {
+				DisplayArea.Image.Dispose();
+				DisplayArea.Image = null;
+			}
+
+			mBmp = new Bitmap(Math.Max(MinimumSize.Width, DisplayArea.Width), Math.Max(MinimumSize.Height, DisplayArea.Height));
+			mG = Graphics.FromImage(mBmp);
+			DisplayArea.Image = mBmp;
+			ScrollBarX_Scroll();
+			ScrollBarY_Scroll();
+		}
+		#endregion
+	}
 }
