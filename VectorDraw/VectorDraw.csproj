@@ -52,8 +52,15 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="Geo.cs" />
-    <Compile Include="Geometry.cs" />
+    <Compile Include="Geometry\Arrow.cs" />
+    <Compile Include="Geometry\Rectangle.cs" />
+    <Compile Include="Geometry\Polygon.cs" />
+    <Compile Include="Geometry\Arc.cs" />
+    <Compile Include="Geometry\Corner.cs" />
+    <Compile Include="Geometry\EPost.cs" />
+    <Compile Include="Geometry\Util.cs" />
+    <Compile Include="Geometry\IGeometry.cs" />
+    <Compile Include="Geometry\Line.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">

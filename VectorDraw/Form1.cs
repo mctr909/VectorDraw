@@ -3,6 +3,8 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
+using Geometry;
+
 namespace VectorDraw {
     public partial class Form1 : Form {
         enum MOUSE_MODE {
@@ -96,13 +98,55 @@ namespace VectorDraw {
         #endregion
 
         #region Menu[Edit] events
+        private void tsmEditEsc_Click(object sender, EventArgs e) {
+        }
+
         private void tsmEditUndo_Click(object sender, EventArgs e) {
         }
 
         private void tsmEditRedo_Click(object sender, EventArgs e) {
         }
 
-        private void tsmEditEsc_Click(object sender, EventArgs e) {
+        private void tsmEditSelect_Click(object sender, EventArgs e) {
+            tsmEditSelect.Checked = false;
+            tsmModeMoveLocalOrigin.Checked = false;
+            tsmModePolyline.Checked = false;
+            tsmModePolygonFill.Checked = false;
+            tsmModePolygonHole.Checked = false;
+
+            var item = (ToolStripMenuItem)sender;
+
+            if (item == tsmEditSelect) {
+                //mMode = MODE.SELECT;
+                //mMouseState = MOUSE_STATE.BEGIN;
+                return;
+            }
+
+            item.Checked = true;
+
+            if (item == tsmModeMoveLocalOrigin) {
+                //mMode = MODE.MOVE_ORIGIN;
+                //mMouseState = MOUSE_STATE.BEGIN;
+                return;
+            }
+            if (item == tsmModePolyline) {
+                //mMode = MODE.POLYLINE;
+                //mMouseState = MOUSE_STATE.BEGIN;
+                return;
+            }
+            if (item == tsmModePolygonFill) {
+                //mMode = MODE.POLYGON_FILL;
+                //mMouseState = MOUSE_STATE.BEGIN;
+                return;
+            }
+            if (item == tsmModePolygonHole) {
+                //mMode = MODE.POLYGON_HOLE;
+                //mMouseState = MOUSE_STATE.BEGIN;
+                return;
+            }
+        }
+
+        private void tsmEditDelete_Click(object sender, EventArgs e) {
         }
 
         private void tsmEditCut_Click(object sender, EventArgs e) {
@@ -112,9 +156,6 @@ namespace VectorDraw {
         }
 
         private void tsmEditPaste_Click(object sender, EventArgs e) {
-        }
-
-        private void tsmEditDelete_Click(object sender, EventArgs e) {
         }
         #endregion
 
@@ -151,43 +192,6 @@ namespace VectorDraw {
             item.Checked = !item.Checked;
         }
 
-        private void tsmMode_Click(object sender, EventArgs e) {
-            tsmModeSelect.Checked = false;
-            tsmModeMoveLocalOrigin.Checked = false;
-            tsmModePolyline.Checked = false;
-            tsmModePolygonFill.Checked = false;
-            tsmModePolygonHole.Checked = false;
-
-            var item = (ToolStripMenuItem)sender;
-            item.Checked = true;
-
-            if (item == tsmModeSelect) {
-                //mMode = MODE.SELECT;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModeMoveLocalOrigin) {
-                //mMode = MODE.MOVE_ORIGIN;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolyline) {
-                //mMode = MODE.POLYLINE;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolygonFill) {
-                //mMode = MODE.POLYGON_FILL;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-            if (item == tsmModePolygonHole) {
-                //mMode = MODE.POLYGON_HOLE;
-                //mMouseState = MOUSE_STATE.BEGIN;
-                return;
-            }
-        }
-
         #region PictureBox events
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e) {
         }
@@ -211,55 +215,68 @@ namespace VectorDraw {
             }
             mG.Clear(Color.Black);
 
-            //var c = new Bow();
-            //c.Pa.X = 300;
-            //c.Pa.Y = 400;
+			//{
+			//	var c = new Geometry.Rectangle();
+			//	c.Pa.X = 400;
+			//	c.Pa.Y = 300;
+			//	c.Pb.X = 410;
+			//	c.Pb.Y = 310;
+			//	var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+			//	c.Pb.X = c.Pa.X + 300 * (float)Math.Cos(th);
+			//	c.Pb.Y = c.Pa.Y + 300 * (float)Math.Sin(th);
+			//	c.Thickness = Geometry.Rectangle.LastThickness;
+			//	c.Calc();
+			//	c.Draw(mG, c.IsSelected(mCursor));
+			//}
 
-            //c.Radius = 120;
-            //var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            //c.Calc();
-            //c.Draw(mG, c.IsSelected(mCursor));
+			{
+				var c = new Arrow();
+				c.Pa.X = 400;
+				c.Pa.Y = 300;
+				c.Pb.X = 410;
+				c.Pb.Y = 310;
+				var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+				c.Pb.X = c.Pa.X + 300 * (float)Math.Cos(th);
+				c.Pb.Y = c.Pa.Y + 300 * (float)Math.Sin(th);
+				c.Length = Arrow.LastLength;
+				c.Width = Arrow.LastWidth;
+				c.Thickness = Arrow.LastThickness;
+				c.Calc();
+				c.Draw(mG, c.IsSelected(mCursor));
+			}
 
-            //c.Radius = -120;
-            //th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            //c.Pb.X = c.Pa.X + 100 * (float)Math.Cos(th);
-            //c.Pb.Y = c.Pa.Y + 100 * (float)Math.Sin(th);
-            //c.Calc();
-            //c.Draw(mG, c.IsSelected(mCursor));
+			{
+				var c = new Arc();
+				c.Po.X = 300;
+				c.Po.Y = 400;
+				c.Radius = 120;
+				c.Sweep = 45;
+				c.Begin = 360 * cnt / DELTA + 45;
+				c.Draw(mG, c.IsSelected(mCursor));
+				var opx = mCursor.X - c.Po.X;
+				var opy = mCursor.Y - c.Po.Y;
+				var opr = Math.Sqrt(opx * opx + opy * opy);
+				var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI;
+				tslPos.Text = string.Format("R:{0}, θ:{1}", opr.ToString("g3"), op_arg.ToString("g3"));
+				c.Begin = 360 * cnt / DELTA + 180;
+				c.Draw(mG, c.IsSelected(mCursor));
+			}
 
-            var c = new Corner();
-            c.Po.X = 200;
-            c.Po.Y = 200;
-            c.Pa.X = 400;
-            c.Pa.Y = 400;
+			{
+				var c = new Corner();
+				c.Po.X = 200;
+				c.Po.Y = 200;
+				c.Pa.X = 400;
+				c.Pa.Y = 400;
+				c.Radius = Corner.LastRadius;
+				var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
+				c.Pb.X = c.Po.X + 300 * (float)Math.Cos(th);
+				c.Pb.Y = c.Po.Y + 300 * (float)Math.Sin(th);
+				c.Calc();
+				c.Draw(mG, c.IsSelected(mCursor));
+			}
 
-            c.Radius = 50;
-            var th = 2 * Math.PI * cnt / DELTA + Math.PI / 2;
-            c.Pb.X = c.Po.X + 300 * (float)Math.Cos(th);
-            c.Pb.Y = c.Po.Y + 300 * (float)Math.Sin(th);
-            c.Calc();
-            c.Draw(mG, c.IsSelected(mCursor));
-
-            //var c = new Arc();
-            //c.Po.X = 300;
-            //c.Po.Y = 400;
-            //c.Radius = 120;
-            //c.Sweep = 45;
-
-            //c.Begin = 360 * cnt / DELTA + 45;
-            //c.Draw(mG, c.IsSelected(mCursor));
-            //var opx = mCursor.X - c.Po.X;
-            //var opy = mCursor.Y - c.Po.Y;
-            //var opr = Math.Sqrt(opx * opx + opy * opy);
-            //var op_arg = Math.Atan2(opy, opx) * 180 / Math.PI;
-            //tslPos.Text = string.Format("R:{0}, θ:{1}", opr.ToString("g3"), op_arg.ToString("g3"));
-
-            //c.Begin = 360 * cnt / DELTA + 180;
-            //c.Draw(mG, c.IsSelected(mCursor));
-
-            cnt = (++cnt % DELTA);
+			cnt = (++cnt % DELTA);
             pictureBox1.Image = pictureBox1.Image;
         }
 
